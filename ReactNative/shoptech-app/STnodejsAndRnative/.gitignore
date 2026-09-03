@@ -1,0 +1,21 @@
+# Bỏ qua thư mục thư viện chung cho cả 3 project (Rất quan trọng)
+node_modules/
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Bỏ qua file build của WebAppSt
+STnodejsAndRnative/WebAppSt/dist/
+STnodejsAndRnative/WebAppSt/build/
+STnodejsAndRnative/WebAppSt/.next/
+
+# Bỏ qua file rác và build của React Native (Cực kỳ nặng)
+STnodejsAndRnative/ReactNative/android/app/build/
+STnodejsAndRnative/ReactNative/android/.gradle/
+STnodejsAndRnative/ReactNative/ios/Pods/
+STnodejsAndRnative/ReactNative/ios/build/
+*.xcworkspace
+
+STnodejsAndRnative/WebAppSt/.workspace/
