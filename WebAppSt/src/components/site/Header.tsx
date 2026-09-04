@@ -16,6 +16,8 @@ import { useState, useEffect } from "react";
 import { authService } from "@/lib/api/api-auth";
 import { categoryService, Category } from "@/lib/api/api-category";
 import { notificationService } from "@/lib/api/api-notification";
+import { productService, Product } from "@/lib/api/api-product";
+import { getImageUrl } from "@/lib/utils";
 
 const convertToSlug = (text: string) => {
   return text
@@ -31,6 +33,9 @@ const convertToSlug = (text: string) => {
 export function Header() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // State danh mục động từ Backend
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
@@ -81,6 +86,29 @@ export function Header() {
       setUnreadCount(0);
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!q.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      setShowSearchResults(true);
+      try {
+        const data = await productService.getProducts({ name: q });
+        setSearchResults(data.slice(0, 5));
+      } catch (err) {
+        console.error("Search error", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [q]);
 
   const handleLogoutClick = () => {
     setShowDropdown(false);
@@ -158,16 +186,60 @@ export function Header() {
         </Link>
 
         {/* Search Bar */}
-        <form onSubmit={submit} className="flex-1 max-w-2xl">
+        <form onSubmit={submit} className="flex-1 max-w-2xl relative">
           <div className="flex items-center rounded-full bg-white px-4 py-2 shadow-sm">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onFocus={() => { if(q.trim()) setShowSearchResults(true); }}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
               placeholder="Bạn cần tìm gì hôm nay?..."
               className="ml-2 w-full bg-transparent text-sm text-black outline-none placeholder:text-muted-foreground"
             />
           </div>
+
+          {/* Live Search Dropdown */}
+          {showSearchResults && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border overflow-hidden z-50">
+              {isSearching ? (
+                <div className="p-4 flex items-center justify-center text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Đang tìm kiếm...
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div>
+                  {searchResults.map(p => (
+                    <Link
+                      key={p._id}
+                      to="/product/$id"
+                      params={{ id: p._id }}
+                      className="flex items-center gap-3 p-3 hover:bg-slate-50 border-b last:border-0"
+                    >
+                      <img 
+                        src={p.images?.[0] ? getImageUrl(p.images[0]) : "https://placehold.co/100x100?text=No+Image"} 
+                        alt={p.name}
+                        className="w-10 h-10 object-contain rounded border p-0.5 bg-white shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-800 line-clamp-1">{p.name}</div>
+                        <div className="text-xs text-red-600 font-bold">{(p.price || 0).toLocaleString("vi-VN")}₫</div>
+                      </div>
+                    </Link>
+                  ))}
+                  <button 
+                    type="submit" 
+                    className="w-full text-center p-2 text-sm text-primary font-medium hover:bg-slate-50 bg-slate-50/50 cursor-pointer"
+                  >
+                    Xem tất cả kết quả cho "{q}"
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Không tìm thấy sản phẩm nào cho "{q}"
+                </div>
+              )}
+            </div>
+          )}
         </form>
 
         {/* Actions Icons */}

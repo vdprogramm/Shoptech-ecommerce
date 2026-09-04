@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { adminProductService, IProduct } from "@/lib/api/admin/api-admin-product";
 import { adminStoreService } from "@/lib/api/admin/api-admin-store";
 import { ProductForm } from "./-components/ProductForm"; // Nạp form từ thư mục có tiền tố "-"
-import { Loader2, Plus, Trash2, Edit3, PackageOpen, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit3, PackageOpen, ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
 import { showSuccessModal } from "@/components/ui/GlobalSuccessModal";
 
@@ -47,9 +47,10 @@ function AdminProductsManagement() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
-  // Pagination
+  // Pagination & Search
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Quản lý trạng thái chuyển đổi màn hình: Danh sách | Tạo mới | Chỉnh sửa
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
@@ -222,8 +223,12 @@ function AdminProductsManagement() {
   }
 
   // DIỆN MẠO BẢNG HIỂN THỊ CHÍNH (LIST MODE)
-  const totalPages = Math.ceil(products.length / itemsPerPage);
-  const currentProducts = products.slice(
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const currentProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -238,12 +243,27 @@ function AdminProductsManagement() {
             phẩm thực tế trong DB
           </p>
         </div>
-        <button
-          onClick={() => setViewMode("create")}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4" /> Thêm sản phẩm
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-primary w-64"
+            />
+          </div>
+          <button
+            onClick={() => setViewMode("create")}
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> Thêm sản phẩm
+          </button>
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -357,7 +377,7 @@ function AdminProductsManagement() {
       )}
 
       {/* Pagination Controls */}
-      {viewMode === "list" && products.length > itemsPerPage && (
+      {viewMode === "list" && filteredProducts.length > itemsPerPage && (
         <div className="flex justify-center items-center gap-2 mt-6">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}

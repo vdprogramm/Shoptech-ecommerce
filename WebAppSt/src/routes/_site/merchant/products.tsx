@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 // 🟢 Thay thế service của admin bằng apiMerchant chuyên biệt của phân hệ cửa hàng
 import { apiMerchant } from "@/lib/api/api-merchant";
-import { Loader2, Plus, Trash2, Edit3, PackageOpen, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit3, PackageOpen, ArrowLeft, Search } from "lucide-react";
 import { authService } from "@/lib/api/api-auth";
 import { MerchantProductForm } from "./-components/MerchantProductForm";
 import { getImageUrl } from "@/lib/utils";
@@ -24,6 +24,7 @@ function MerchantProductsManagement() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Quản lý trạng thái chuyển đổi màn hình: Danh sách | Tạo mới | Chỉnh sửa
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
@@ -222,12 +223,27 @@ function MerchantProductsManagement() {
             sản phẩm được phân phối
           </p>
         </div>
-        <button
-          onClick={() => setViewMode("create")}
-          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4" /> Thêm sản phẩm vào shop
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-red-500 w-64"
+            />
+          </div>
+          <button
+            onClick={() => setViewMode("create")}
+            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> Thêm sản phẩm vào shop
+          </button>
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -249,6 +265,7 @@ function MerchantProductsManagement() {
             </thead>
             <tbody>
               {products
+                .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
                 .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                 .map((p) => {
                   const displayImage =
@@ -320,11 +337,11 @@ function MerchantProductsManagement() {
             </tbody>
           </table>
 
-          {Math.ceil(products.length / itemsPerPage) > 1 && (
+          {Math.ceil(products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length / itemsPerPage) > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <span className="text-sm text-gray-500">
                 Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
-                {Math.min(currentPage * itemsPerPage, products.length)} trên tổng {products.length}{" "}
+                {Math.min(currentPage * itemsPerPage, products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length)} trên tổng {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length}{" "}
                 sản phẩm
               </span>
               <div className="flex items-center gap-2">
@@ -336,15 +353,15 @@ function MerchantProductsManagement() {
                   Trước
                 </button>
                 <span className="text-sm font-medium px-2">
-                  Trang {currentPage} / {Math.ceil(products.length / itemsPerPage)}
+                  Trang {currentPage} / {Math.ceil(products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length / itemsPerPage)}
                 </span>
                 <button
                   onClick={() =>
                     setCurrentPage((p) =>
-                      Math.min(Math.ceil(products.length / itemsPerPage), p + 1),
+                      Math.min(Math.ceil(products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length / itemsPerPage), p + 1),
                     )
                   }
-                  disabled={currentPage === Math.ceil(products.length / itemsPerPage)}
+                  disabled={currentPage === Math.ceil(products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length / itemsPerPage)}
                   className="px-3 py-1 text-sm border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Sau
