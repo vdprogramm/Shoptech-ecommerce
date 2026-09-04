@@ -86,8 +86,13 @@ export class ProductsService {
 
   // 2. LẤY DANH SÁCH (Dành cho khách hàng xem toàn sàn)
   async findAll(query: any): Promise<Product[]> {
+    const filter = { ...query };
+    if (filter.name) {
+      filter.name = { $regex: filter.name, $options: 'i' };
+    }
+    
     return this.productModel
-      .find(query)
+      .find(filter)
       .populate('category brand')
       .populate('variants')
       .sort({ createdAt: -1 })
