@@ -73,21 +73,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
+      { title: "Smart Tech Shop" },
       {
         name: "description",
         content: "Smart Tech Shop is a mobile app for buying and managing electronics online.",
       },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
+      { name: "author", content: "Shoptech" },
+      { property: "og:title", content: "Smart Tech Shop" },
       {
         property: "og:description",
         content: "Smart Tech Shop is a mobile app for buying and managing electronics online.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
+      { name: "twitter:site", content: "@Shoptech" },
+      { name: "twitter:title", content: "Smart Tech Shop" },
       {
         name: "twitter:description",
         content: "Smart Tech Shop is a mobile app for buying and managing electronics online.",
