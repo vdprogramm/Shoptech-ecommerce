@@ -81,7 +81,7 @@ export class PaymentsController {
 
   @Get('vnpay_return')
   async vnpayReturn(@Query() query: any, @Res() res) {
-    const frontendUrl = 'http://localhost:8080/payment-result';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://shoptech-ecommerce.vercel.app/payment-result';
     console.log('📌 VNPAY Return Callback received:', query);
 
 
