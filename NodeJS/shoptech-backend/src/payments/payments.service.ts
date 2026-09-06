@@ -14,8 +14,11 @@ private vnp_TmnCode = process.env.VNP_TMN_CODE as string;
     const date = new Date();
     const createDate = moment(date).format('YYYYMMDDHHmmss');
 
-    // FIX 1: Lọc IP, chỉ lấy IP đầu tiên nếu bị dính dấu phẩy do Ngrok
-    const cleanIp = ip ? ip.split(',')[0].trim() : '127.0.0.1';
+    // FIX 1: Lọc IP, nếu là IPv6 (có chứa dấu hai chấm) thì hardcode về IPv4 ảo để tránh lỗi Code 99 của VNPAY
+    let cleanIp = ip ? ip.split(',')[0].trim() : '127.0.0.1';
+    if (cleanIp.includes(':')) {
+      cleanIp = '12.34.56.78';
+    }
 
     let vnp_Params: any = {};
     vnp_Params['vnp_Version'] = '2.1.0';
