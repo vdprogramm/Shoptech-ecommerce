@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 import io from 'socket.io-client';
 
 const SOCKET_URL = 'http://10.0.2.2:5000/live-chat'; // Ensure to use local IP if physical device, or 10.0.2.2 for emulator
 
 export default function LiveChatScreen() {
+    const route = useRoute<any>();
     const navigation = useNavigation();
     const user = useAuthStore((state) => state.user);
+    const { storeId, storeName } = route.params || {};
     
     const [socket, setSocket] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
@@ -18,6 +20,8 @@ export default function LiveChatScreen() {
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
+        if (!storeId) return;
+
         // Generate a random guest ID if user is not logged in
         let currentGuestId = '';
         if (!user) {
@@ -32,7 +36,8 @@ export default function LiveChatScreen() {
             newSocket.emit('register', { 
                 role: 'user', 
                 userId: user?._id, 
-                guestId: currentGuestId 
+                guestId: currentGuestId,
+                storeId: storeId 
             });
         });
 
@@ -45,15 +50,16 @@ export default function LiveChatScreen() {
         return () => {
             newSocket.disconnect();
         };
-    }, [user]);
+    }, [user, storeId]);
 
     const sendMessage = () => {
-        if (!input.trim() || !socket) return;
+        if (!input.trim() || !socket || !storeId) return;
 
         socket.emit('send_message', {
             senderRole: user ? 'user' : 'guest',
             userId: user?._id,
             guestId: guestId,
+            storeId: storeId,
             customerName: user ? user.fullName : 'Khách hàng',
             content: input
         });
@@ -78,7 +84,7 @@ export default function LiveChatScreen() {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chat với nhân viên</Text>
+                <Text style={styles.headerTitle}>Chat với {storeName || 'Cửa hàng'}</Text>
             </View>
 
             <KeyboardAvoidingView 

@@ -9,7 +9,6 @@ export default function ContactConsultationScreen() {
     const contactMethods = [
         { icon: 'phone', label: 'Gọi Hotline (Miễn phí)', detail: '1800 6969', color: '#d70018', action: () => Linking.openURL('tel:18006969') },
         { icon: 'email', label: 'Gửi Email Hỗ Trợ', detail: 'cskh@shoptech.com', color: '#1e88e5', action: () => Linking.openURL('mailto:cskh@shoptech.com') },
-        { icon: 'chat-processing', label: 'Chat trực tiếp với ShopTech', detail: 'Phản hồi ngay lập tức', color: '#00c300', action: () => (navigation as any).navigate('LiveChat') },
         { icon: 'chat', label: 'Chat với nhân viên Zalo', detail: 'ShopTech Official', color: '#0068ff', action: () => {} },
     ];
 

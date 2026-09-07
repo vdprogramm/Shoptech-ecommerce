@@ -54,6 +54,13 @@ export default function StoreDetailScreen() {
                     <View style={styles.activeDot} />
                     <Text style={styles.activeBadgeText}>Đang hoạt động</Text>
                 </View>
+                <TouchableOpacity 
+                    style={styles.chatButton}
+                    onPress={() => navigation.navigate('LiveChat', { storeId: store._id, storeName: store.name })}
+                >
+                    <Ionicons name="chatbubbles-outline" size={16} color="#ff4757" />
+                    <Text style={styles.chatButtonText}>Chat với Cửa hàng</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -204,6 +211,22 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#fff',
         fontWeight: '600',
+    },
+    chatButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
+        marginTop: 10,
+        gap: 5,
+    },
+    chatButtonText: {
+        fontSize: 12,
+        color: '#ff4757',
+        fontWeight: 'bold',
     },
     sectionHeader: {
         paddingHorizontal: 15,
