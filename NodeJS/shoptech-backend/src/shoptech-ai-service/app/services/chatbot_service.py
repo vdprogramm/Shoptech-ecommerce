@@ -403,14 +403,25 @@ class ChatbotService:
         # Xóa trùng lặp dựa trên Tên sản phẩm
         unique_context = list(set(combined_context))
 
-        # Dành cho LLM: Chỉ gửi thông tin rút gọn (Tên sản phẩm/Cửa hàng/Danh mục) để tránh LLM "nhại lại" Markdown
+        # Dành cho LLM: Gửi thông tin kèm ID (P1, P2,...) và Giá, Danh mục để LLM lọc
         llm_context_list = []
-        for item in unique_context:
-            first_line = item.strip().split('\n')[0]
-            first_line = first_line.replace('**', '').replace('-', '').strip()
-            # Bỏ qua các ảnh hoặc mô tả bị lọt vào
-            if first_line and not first_line.startswith('![') and not first_line.startswith('['):
-                llm_context_list.append(f"- {first_line}")
+        markdown_map = {}
+        
+        for i, item in enumerate(unique_context):
+            pid = f"[P{i+1}]"
+            markdown_map[pid] = item
+            
+            # Trích xuất thông tin cơ bản cho LLM đọc
+            lines = item.strip().split('\n')
+            name = lines[0].replace('**', '').replace('-', '').strip()
+            price = "Chưa rõ"
+            cat_brand = "Chưa rõ"
+            for line in lines:
+                if line.startswith("Giá:"): price = line
+                if line.startswith("Danh mục:"): cat_brand = line
+            
+            if name and not name.startswith('![') and not name.startswith('['):
+                llm_context_list.append(f"{pid} - {name} ({price}, {cat_brand})")
             
         store_context_for_llm = "\n".join(llm_context_list) if llm_context_list else "Hiện tại không tìm thấy dữ liệu nào phù hợp."
 
@@ -421,14 +432,14 @@ class ChatbotService:
             f"Bạn là trợ lý ảo thông minh ShopTech AI.\n"
             f"Bạn đang đại diện hỗ trợ tư vấn cho: {scope_text}.\n"
             f"{user_identity}\n\n"
-            "DỮ LIỆU HỆ THỐNG TÌM ĐƯỢC:\n"
+            "DANH SÁCH DỮ LIỆU TÌM ĐƯỢC (Đã được đánh mã [P1], [P2]...):\n"
             f"---\n{store_context_for_llm}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
-            "1. Hệ thống đã TỰ ĐỘNG hiển thị toàn bộ chi tiết (Ảnh, Giá, Link) của các Dữ liệu trên ở ngay bên dưới tin nhắn của bạn rồi.\n"
-            "2. Nhiệm vụ của bạn CHỈ LÀ trò chuyện thân thiện, tóm tắt ngữ cảnh và giới thiệu ngắn gọn (ví dụ: 'Dạ, ShopTech đang có các sản phẩm/cửa hàng/thương hiệu sau, bạn tham khảo nhé:').\n"
-            "3. BẠN BẮT BUỘC KHÔNG ĐƯỢC tự liệt kê chi tiết tên, giá, hay tự chế link vào câu trả lời của bạn, vì nó sẽ gây trùng lặp với phần hệ thống đã hiển thị sẵn!\n"
-            "4. Kiểm tra điều kiện giá cả: Nếu khách yêu cầu giá 'dưới X', mà trong DỮ LIỆU toàn giá cao hơn, hãy xin lỗi khách vì không có mức giá phù hợp.\n"
-            "5. Xưng 'Shop' gọi 'Bạn'."
+            "1. LỌC DỮ LIỆU CỰC KỲ NGHIÊM NGẶT: Bạn PHẢI kiểm tra Danh mục và Giá của từng mã [P1], [P2]... Khách hỏi danh mục nào (VD: điện thoại) thì CHỈ ĐƯỢC CHỌN đúng danh mục đó (TUYỆT ĐỐI KHÔNG chọn Tai nghe, Chuột, Đồng hồ...). KHÔNG ĐƯỢC cố gắng chọn sai danh mục chỉ để có sản phẩm hiển thị!\n"
+            "2. NẾU KHÔNG CÓ SẢN PHẨM NÀO KHỚP 100% YÊU CẦU: Bạn BẮT BUỘC phải nói 'Dạ hiện tại Shop không có sản phẩm nào phù hợp yêu cầu của bạn ạ.' và KHÔNG CHÈN MÃ NÀO CẢ.\n"
+            "3. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
+            "4. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
+            "5. Trả lời ngắn gọn, lịch sự."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
@@ -454,9 +465,15 @@ class ChatbotService:
             response = self.llm.invoke(langchain_messages)
             clean_reply = response.content.replace("<pad>", "").strip()
 
-            # Tự động nối danh sách sản phẩm/cửa hàng/voucher vào cuối tin nhắn của AI (để tránh AI tự chế)
-            if unique_context:
-                clean_reply += "\n\n---\n" + "\n\n".join(unique_context)
+            # Thay thế các mã [P1], [P2] bằng khối Markdown thực tế
+            for pid, markdown in markdown_map.items():
+                if pid in clean_reply:
+                    # Chèn một đường kẻ và cách dòng cho đẹp
+                    markdown_formatted = f"\n\n---\n{markdown}\n---"
+                    clean_reply = clean_reply.replace(pid, markdown_formatted)
+
+            # Nếu LLM quên dùng mã mà tự sinh ra list rỗng, xử lý fallback nếu cần
+            # Nhưng tốt nhất là tin tưởng LLM sẽ dùng mã.
             
             return clean_reply
 
