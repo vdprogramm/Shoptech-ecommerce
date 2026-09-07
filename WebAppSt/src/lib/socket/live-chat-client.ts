@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 class LiveChatClient {
   private socket: Socket | null = null;
-  private url = 'http://localhost:5000/live-chat'; // Ensure port matches backend
+  private url = 'https://shoptech-api-ytxj.onrender.com/live-chat'; // Ensure port matches backend
 
   connect(role: string, userId?: string, guestId?: string, storeId?: string) {
     if (!this.socket) {

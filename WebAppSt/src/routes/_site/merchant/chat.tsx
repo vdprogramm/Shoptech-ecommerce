@@ -66,7 +66,7 @@ function LiveChatVendor() {
   const fetchConversations = async () => {
     if (!storeId) return;
     try {
-      const res = await axios.get(`http://localhost:5000/live-chat/conversations?storeId=${storeId}`);
+      const res = await axios.get(`https://shoptech-api-ytxj.onrender.com/live-chat/conversations?storeId=${storeId}`);
       setConversations(res.data.data || []);
     } catch (e) {
       console.error(e);
@@ -75,7 +75,7 @@ function LiveChatVendor() {
 
   const fetchHistory = async (convId: string) => {
     try {
-      const res = await axios.get(`http://localhost:5000/live-chat/history/${convId}`);
+      const res = await axios.get(`https://shoptech-api-ytxj.onrender.com/live-chat/history/${convId}`);
       setMessages(res.data.data || []);
     } catch (e) {
       console.error(e);
