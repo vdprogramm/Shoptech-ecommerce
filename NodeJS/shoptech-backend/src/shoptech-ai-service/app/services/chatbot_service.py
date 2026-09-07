@@ -140,6 +140,52 @@ class ChatbotService:
 
         db_results = []
         
+        # --- TÌM KIẾM ĐƠN HÀNG NẾU NGƯỜI DÙNG HỎI ---
+        order_keywords = ['đơn hàng', 'đơn mua', 'theo dõi đơn', 'tình trạng đơn', 'đơn của tôi', 'vận chuyển', 'đã giao', 'chưa giao', 'đang giao']
+        is_asking_orders = any(kw in current_message.lower() for kw in order_keywords)
+        
+        if is_asking_orders and user_id:
+            try:
+                from bson.objectid import ObjectId
+                recent_orders = list(self.db.orders.find(
+                    {"user": ObjectId(user_id)}
+                ).sort("createdAt", -1).limit(3))
+                
+                if recent_orders:
+                    db_results.append("THÔNG TIN CÁC ĐƠN HÀNG GẦN ĐÂY CỦA KHÁCH HÀNG (Hãy tóm tắt và báo cáo tình trạng cho khách):")
+                    for order in recent_orders:
+                        code = order.get('orderCode', 'Không rõ')
+                        total = order.get('totalAmount', 0)
+                        
+                        payment_status = order.get('paymentStatus', '')
+                        if payment_status == 'Paid': payment_status = 'Đã thanh toán'
+                        elif payment_status == 'Unpaid': payment_status = 'Chưa thanh toán'
+                        
+                        sub_orders = order.get('subOrders', [])
+                        
+                        items_str = []
+                        all_statuses = []
+                        for so in sub_orders:
+                            s_status = so.get('status', 'Pending')
+                            all_statuses.append(s_status)
+                            for item in so.get('items', []):
+                                items_str.append(f"{item.get('name')} (x{item.get('quantity')})")
+                        
+                        summary_status = "Đang xử lý"
+                        if "Cancelled" in all_statuses: summary_status = "Đã hủy"
+                        elif "Shipped" in all_statuses: summary_status = "Đang giao hàng"
+                        elif "Delivered" in all_statuses: summary_status = "Đã giao thành công"
+                        
+                        items_joined = ", ".join(items_str)
+                        content = f"- Mã đơn: {code} | Trạng thái: {summary_status} | Thanh toán: {payment_status} | Tổng tiền: {total}đ | Sản phẩm: {items_joined}"
+                        db_results.append(content)
+                else:
+                    db_results.append("Khách hàng hiện chưa có đơn hàng nào trong hệ thống, hoặc bạn chưa mua hàng.")
+            except Exception as e:
+                print("Lỗi khi fetch đơn hàng:", e)
+        elif is_asking_orders and not user_id:
+            db_results.append("Hệ thống yêu cầu: Khách hàng chưa đăng nhập. Hãy nhắc nhở khách hàng đăng nhập để tra cứu thông tin đơn hàng.")
+
         # --- TÌM KIẾM FLASH SALE NẾU NGƯỜI DÙNG HỎI ---
         flash_sale_keywords = ['flash sale', 'flashsale', 'sale', 'khuyến mãi', 'giảm giá', 'giá hời', 'ưu đãi']
         is_asking_flash_sale = any(kw in current_message.lower() for kw in flash_sale_keywords)
