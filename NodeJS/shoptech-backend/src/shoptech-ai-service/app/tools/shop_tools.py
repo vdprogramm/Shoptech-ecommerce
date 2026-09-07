@@ -8,6 +8,20 @@ from bson.objectid import ObjectId
 db_client = MongoClient(settings.MONGODB_URI)
 db = db_client.get_database()
 
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_community.vectorstores import Chroma
+
+# Khởi tạo Vector DB
+embeddings = HuggingFaceEndpointEmbeddings(
+    model=settings.HF_EMBEDDING_MODEL,
+    huggingfacehub_api_token=settings.HUGGINGFACEHUB_API_TOKEN
+)
+vector_db = Chroma(
+    collection_name="shoptech_global_products",
+    embedding_function=embeddings,
+    persist_directory="./chroma_shoptech_db"
+)
+
 @tool
 def search_products(keyword: str, store_id: str = None) -> str:
     """
@@ -17,40 +31,22 @@ def search_products(keyword: str, store_id: str = None) -> str:
     :param store_id: (Optional) Mã cửa hàng nếu khách hàng đang chat trong phạm vi 1 cửa hàng.
     """
     try:
-        words = keyword.split()
-        search_terms = [w for w in words if len(w) >= 3 and w.lower() not in ['cho', 'tôi', 'mua', 'tìm', 'xem', 'cái', 'có', 'không']]
-        if not search_terms:
-            search_terms = [keyword]
+        search_kwargs = {"k": 6}
+        if store_id and store_id != "default_store" and store_id != "null" and store_id != "":
+            search_kwargs["filter"] = {"storeId": str(store_id)}
 
-        regex_queries = [{"name": {"$regex": term, "$options": "i"}} for term in search_terms]
-        query_filter = {"$or": regex_queries, "isAvailable": True}
-        
-        if store_id and store_id != "default_store":
-            query_filter["store"] = store_id
-            
-        products = list(db.products.find(query_filter).limit(6))
+        search_results = vector_db.similarity_search(
+            query=keyword,
+            **search_kwargs
+        )
 
-        if not products:
-            return f"Không tìm thấy sản phẩm nào khớp với từ khóa: '{keyword}'."
+        if not search_results:
+            return f"Không tìm thấy sản phẩm nào phù hợp với yêu cầu: '{keyword}'."
 
         result = "Danh sách sản phẩm tìm thấy:\n"
-        for p in products:
-            slug = p.get('slug', str(p.get('_id')))
-            raw_image = str(p.get('images', [''])[0] if p.get('images') else '')
-            backend_render_url = "https://shoptech-api-ytxj.onrender.com"
-            if raw_image and raw_image.startswith('data:image/'):
-                image_url = f"{backend_render_url}/products/{p.get('_id')}/image?ext=.jpg"
-            elif raw_image and not raw_image.startswith('http'):
-                clean = raw_image.lstrip('/')
-                if clean.startswith('uploads/'): clean = clean.replace('uploads/', '', 1)
-                image_url = f"{backend_render_url}/uploads/{clean}"
-            else:
-                image_url = raw_image or "null"
-
-            result += (
-                f"- Tên: {p.get('name')} | Giá: {p.get('price')} VNĐ | "
-                f"Link ảnh: {image_url} | Link đặt hàng: /product/{slug}\n"
-            )
+        for doc in search_results:
+            result += f"- {doc.page_content}\n"
+            
         return result
     except Exception as e:
         return f"Lỗi khi tìm kiếm sản phẩm: {str(e)}"
