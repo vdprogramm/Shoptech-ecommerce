@@ -159,6 +159,46 @@ class ChatbotService:
 
         db_results = []
         
+        # --- RECOMMENDATION SYSTEM: LẤY HÀNH VI NGƯỜI DÙNG (GIỎ HÀNG & LỊCH SỬ MUA HÀNG) ---
+        if user_id:
+            try:
+                from bson.objectid import ObjectId
+                # 1. Đọc Giỏ hàng (Cart)
+                cart = self.db.carts.find_one({"user": ObjectId(user_id)})
+                if cart and cart.get('items'):
+                    cart_items = cart.get('items', [])
+                    cart_products = []
+                    for item in cart_items:
+                        variant_id = item.get('variant')
+                        if variant_id:
+                            variant = self.db.productvariants.find_one({"_id": ObjectId(str(variant_id))})
+                            if variant and variant.get('product'):
+                                product = self.db.products.find_one({"_id": variant.get('product')})
+                                if product:
+                                    cart_products.append(product.get('name', ''))
+                    if cart_products:
+                        cart_str = ", ".join(list(set(cart_products)))
+                        db_results.append(f"[THÔNG TIN HÀNH VI]: Khách hàng hiện đang có các sản phẩm sau trong GIỎ HÀNG: {cart_str}. Hãy khéo léo nhắc hoặc đề xuất sản phẩm liên quan.")
+                
+                # 2. Đọc Đơn hàng gần nhất (Recent Order)
+                last_order = self.db.orders.find_one({"user": ObjectId(user_id)}, sort=[("createdAt", -1)])
+                if last_order:
+                    order_items = []
+                    for so in last_order.get('subOrders', []):
+                        for item in so.get('items', []):
+                            item_name = item.get('name', '')
+                            if not item_name or item_name.lower() == 'sản phẩm':
+                                try:
+                                    p_doc = self.db.products.find_one({"_id": item.get('product')})
+                                    if p_doc: item_name = p_doc.get('name', 'Sản phẩm')
+                                except: pass
+                            order_items.append(item_name)
+                    if order_items:
+                        order_str = ", ".join(list(set(order_items)))
+                        db_results.append(f"[THÔNG TIN HÀNH VI]: Lần gần nhất khách hàng đã mua: {order_str}.")
+            except Exception as e:
+                print("Lỗi hệ thống đề xuất:", e)
+
         # --- TÌM KIẾM ĐƠN HÀNG NẾU NGƯỜI DÙNG HỎI ---
         order_keywords = ['đơn hàng', 'đơn mua', 'theo dõi đơn', 'tình trạng đơn', 'đơn của tôi', 'vận chuyển', 'đã giao', 'chưa giao', 'đang giao']
         is_asking_orders = any(kw in current_message.lower() for kw in order_keywords)
