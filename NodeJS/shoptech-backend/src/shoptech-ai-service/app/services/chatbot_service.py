@@ -291,6 +291,32 @@ class ChatbotService:
             except Exception as e:
                 print("Lỗi khi fetch vouchers:", e)
 
+        # --- TÌM KIẾM DANH MỤC NẾU NGƯỜI DÙNG HỎI ---
+        category_keywords = ['danh mục', 'ngành hàng', 'loại sản phẩm']
+        is_asking_categories = any(kw in current_message.lower() for kw in category_keywords)
+        if is_asking_categories:
+            try:
+                categories = list(self.db.categories.find({}).limit(15))
+                if categories:
+                    db_results.append("DANH MỤC SẢN PHẨM HIỆN CÓ:")
+                    for c in categories:
+                        db_results.append(f"- Danh mục: **{c.get('name', '')}**")
+            except Exception as e:
+                print("Lỗi khi fetch categories:", e)
+
+        # --- TÌM KIẾM THƯƠNG HIỆU NẾU NGƯỜI DÙNG HỎI ---
+        brand_keywords = ['thương hiệu', 'hãng', 'brand']
+        is_asking_brands = any(kw in current_message.lower() for kw in brand_keywords)
+        if is_asking_brands:
+            try:
+                brands = list(self.db.brands.find({}).limit(15))
+                if brands:
+                    db_results.append("CÁC THƯƠNG HIỆU/HÃNG ĐANG BÁN:")
+                    for b in brands:
+                        db_results.append(f"- Thương hiệu: **{b.get('name', '')}**")
+            except Exception as e:
+                print("Lỗi khi fetch brands:", e)
+
         # TÌM KIẾM KEYWORD TỪ MONGODB (Khắc phục lỗi Vector Search kém với tiếng Việt không dấu)
         try:
             # Lấy các từ khóa dài hơn 2 ký tự để search regex
@@ -343,10 +369,16 @@ class ChatbotService:
         # Xóa trùng lặp dựa trên Tên sản phẩm
         unique_context = list(set(combined_context))
 
-        if unique_context:
-            store_context = "\n".join(unique_context)
-        else:
-            store_context = "Hiện tại không tìm thấy dữ liệu sản phẩm nào phù hợp với yêu cầu trong hệ thống."
+        # Dành cho LLM: Chỉ gửi thông tin rút gọn (Tên sản phẩm/Cửa hàng/Danh mục) để tránh LLM "nhại lại" Markdown
+        llm_context_list = []
+        for item in unique_context:
+            first_line = item.strip().split('\n')[0]
+            first_line = first_line.replace('**', '').replace('-', '').strip()
+            # Bỏ qua các ảnh hoặc mô tả bị lọt vào
+            if first_line and not first_line.startswith('![') and not first_line.startswith('['):
+                llm_context_list.append(f"- {first_line}")
+            
+        store_context_for_llm = "\n".join(llm_context_list) if llm_context_list else "Hiện tại không tìm thấy dữ liệu nào phù hợp."
 
         scope_text = "toàn bộ cửa hàng trên sàn" if is_global_search else f"cửa hàng {store_id}"
         user_identity = f"Mã ID của khách hàng đang chat là: {user_id}." if user_id else "Khách hàng hiện tại là Khách vãng lai (chưa đăng nhập)."
@@ -355,13 +387,14 @@ class ChatbotService:
             f"Bạn là trợ lý ảo thông minh ShopTech AI.\n"
             f"Bạn đang đại diện hỗ trợ tư vấn cho: {scope_text}.\n"
             f"{user_identity}\n\n"
-            "DỮ LIỆU SẢN PHẨM HIỆN CÓ CỦA HỆ THỐNG:\n"
-            f"---\n{store_context}\n---\n\n"
-            "QUY TẮC QUAN TRỌNG NHẤT:\n"
-            "1. KIỂM TRA ĐIỀU KIỆN GIÁ CẢ: Nếu khách hàng yêu cầu tìm sản phẩm với mức giá cụ thể (ví dụ: 'dưới 10 triệu'), BẠN BẮT BUỘC PHẢI lọc và chỉ giữ lại những sản phẩm thỏa mãn mức giá đó. TUYỆT ĐỐI KHÔNG ĐƯỢC đề xuất sản phẩm có giá vượt mức khách yêu cầu! Nếu không có sản phẩm nào thỏa mãn, hãy báo 'Shop không có sản phẩm phù hợp mức giá này'.\n"
-            "2. ĐỐI VỚI DỮ LIỆU SẢN PHẨM: Đã được định dạng Markdown. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời, không được thay đổi Tên sản phẩm thành 'Cửa hàng', không được gộp chung, phải giữ nguyên link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`).\n"
-            "3. ĐỐI VỚI CÂU HỎI VỀ CỬA HÀNG VÀ VOUCHER: Hãy liệt kê danh sách một cách rõ ràng như trong dữ liệu cung cấp. KHÔNG ĐƯỢC lấy thông tin sản phẩm để chế thành mã giảm giá hoặc tên cửa hàng.\n"
-            "4. Trả lời lịch sự, thân thiện, xưng 'Shop' gọi 'Bạn'."
+            "DỮ LIỆU HỆ THỐNG TÌM ĐƯỢC:\n"
+            f"---\n{store_context_for_llm}\n---\n\n"
+            "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
+            "1. Hệ thống đã TỰ ĐỘNG hiển thị toàn bộ chi tiết (Ảnh, Giá, Link) của các Dữ liệu trên ở ngay bên dưới tin nhắn của bạn rồi.\n"
+            "2. Nhiệm vụ của bạn CHỈ LÀ trò chuyện thân thiện, tóm tắt ngữ cảnh và giới thiệu ngắn gọn (ví dụ: 'Dạ, ShopTech đang có các sản phẩm/cửa hàng/thương hiệu sau, bạn tham khảo nhé:').\n"
+            "3. BẠN BẮT BUỘC KHÔNG ĐƯỢC tự liệt kê chi tiết tên, giá, hay tự chế link vào câu trả lời của bạn, vì nó sẽ gây trùng lặp với phần hệ thống đã hiển thị sẵn!\n"
+            "4. Kiểm tra điều kiện giá cả: Nếu khách yêu cầu giá 'dưới X', mà trong DỮ LIỆU toàn giá cao hơn, hãy xin lỗi khách vì không có mức giá phù hợp.\n"
+            "5. Xưng 'Shop' gọi 'Bạn'."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
@@ -386,6 +419,11 @@ class ChatbotService:
         try:
             response = self.llm.invoke(langchain_messages)
             clean_reply = response.content.replace("<pad>", "").strip()
+
+            # Tự động nối danh sách sản phẩm/cửa hàng/voucher vào cuối tin nhắn của AI (để tránh AI tự chế)
+            if unique_context:
+                clean_reply += "\n\n---\n" + "\n\n".join(unique_context)
+            
             return clean_reply
 
         except Exception as e:
