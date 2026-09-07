@@ -66,10 +66,12 @@ class ChatbotService:
                 f"- Mã khách hàng (user_id): {user_id if user_id else 'Khách vãng lai'}\n"
                 f"- Mã cửa hàng đang xem (store_id): {store_id if store_id else 'default_store'}\n\n"
                 "QUY TẮC BẮT BUỘC:\n"
-                "1. Bạn PHẢI sử dụng các công cụ (tools) được cung cấp để tra cứu dữ liệu (như tìm sản phẩm, kiểm tra đơn hàng, xem flash sale).\n"
-                "2. Tuyệt đối KHÔNG tự bịa ra thông tin sản phẩm, giá cả, mã đơn hàng hay mã giảm giá.\n"
-                "3. Khi tư vấn sản phẩm/flash sale, hãy trình bày kèm ảnh và link mua hàng (nếu có từ tool) bằng Markdown chuẩn: `![Tên](Link ảnh)` và `[Xem chi tiết và đặt hàng](Link đặt hàng)`.\n"
-                "4. Trả lời lịch sự, thân thiện, xưng 'Shop' và gọi khách là 'Bạn'."
+                "1. NẾU khách hỏi MUA, TÌM KIẾM, TƯ VẤN SẢN PHẨM -> Bạn PHẢI GỌI CÔNG CỤ `search_products`.\n"
+                "2. NẾU khách hỏi ĐƠN HÀNG CỦA TÔI -> Bạn PHẢI GỌI CÔNG CỤ `get_user_orders`.\n"
+                "3. NẾU khách hỏi FLASH SALE, GIẢM GIÁ -> Bạn PHẢI GỌI CÔNG CỤ `get_active_flash_sales`.\n"
+                "4. NẾU khách hỏi MÃ GIẢM GIÁ, VOUCHER -> Bạn PHẢI GỌI CÔNG CỤ `get_active_vouchers`.\n"
+                "5. Tuyệt đối KHÔNG tự bịa ra thông tin. KHÔNG ĐƯỢC từ chối trả lời nếu chưa gọi tool.\n"
+                "6. Trình bày sản phẩm/flash sale bằng Markdown: `![Tên](Link ảnh)` và `[Xem chi tiết và đặt hàng](Link đặt hàng)`."
             )
 
             # Create the Agent dynamically with the specific prompt for this user
