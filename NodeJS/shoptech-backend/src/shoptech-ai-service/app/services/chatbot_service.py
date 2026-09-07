@@ -105,12 +105,11 @@ class ChatbotService:
             slug = p.get('slug', prod_id)
 
             content = (
-                f"Sản phẩm: {name}. "
-                f"Cửa hàng ID: {store_id}. "
-                f"Giá: {price} VNĐ. "
-                f"Mô tả: {desc}. "
-                f"\nLINK ẢNH: {image_url}\n"
-                f"LINK ĐẶT HÀNG: /product/{slug}\n"
+                f"**{name}**\n"
+                f"Giá: {price} VNĐ\n"
+                f"Mô tả: {desc}\n\n"
+                f"![Ảnh sản phẩm]({image_url})\n\n"
+                f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
             )
 
             doc = Document(
@@ -237,12 +236,12 @@ class ChatbotService:
                                 image_url = raw_image or "null"
 
                             content = (
-                                f"Chương trình: {campaign}. "
-                                f"Sản phẩm: {name} (SKU: {sku}). "
-                                f"Giá Gốc: {prod.get('price', 0)} VNĐ -> GIÁ FLASH SALE: {sale_price} VNĐ. "
-                                f"\nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: /product/{slug}\n"
+                                f"**{name}** (Chương trình: {campaign})\n"
+                                f"Giá Gốc: {prod.get('price', 0)} VNĐ -> **GIÁ FLASH SALE: {sale_price} VNĐ**\n\n"
+                                f"![Ảnh sản phẩm]({image_url})\n\n"
+                                f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
                             )
-                            db_results.append(f"- {content}")
+                            db_results.append(content)
                 else:
                     db_results.append("Hiện tại hệ thống không có chương trình Flash Sale hoặc sự kiện giảm giá nào đang diễn ra.")
             except Exception as e:
@@ -280,10 +279,13 @@ class ChatbotService:
                         image_url = raw_image or "null"
 
                     content = (
-                        f"Sản phẩm: {name}. Cửa hàng ID: {p.get('store', 'default')}. Giá: {price} VNĐ. "
-                        f"Mô tả: {desc}. \nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: /product/{slug}\n"
+                        f"**{name}**\n"
+                        f"Giá: {price} VNĐ (Cửa hàng: {p.get('store', 'default')})\n"
+                        f"Mô tả: {desc}\n\n"
+                        f"![Ảnh sản phẩm]({image_url})\n\n"
+                        f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
                     )
-                    db_results.append(f"- {content}")
+                    db_results.append(content)
         except Exception as e:
             print("Lỗi search DB fallback:", e)
 
@@ -311,16 +313,10 @@ class ChatbotService:
             f"{user_identity}\n\n"
             "DỮ LIỆU SẢN PHẨM HIỆN CÓ CỦA HỆ THỐNG:\n"
             f"---\n{store_context}\n---\n\n"
-            "QUY TẮC QUAN TRỌNG:\n"
-            "1. CHỈ TƯ VẤN SẢN PHẨM khớp chính xác với từ khóa hoặc yêu cầu của khách hàng. Tuyệt đối không đề xuất sản phẩm không liên quan (ví dụ: khách hỏi tai nghe thì KHÔNG giới thiệu chuột).\n"
-            "2. Nếu trong DỮ LIỆU SẢN PHẨM không có sản phẩm nào khớp với yêu cầu của khách, hãy thông báo 'Shop hiện tại chưa có sản phẩm này', không gượng ép gợi ý.\n"
-            "3. Trả lời lịch sự, thân thiện, xưng 'Shop' gọi 'Bạn', ngắn gọn và đúng trọng tâm.\n"
-            "4. KHI GỢI Ý SẢN PHẨM: Trình bày thông tin sản phẩm bằng Markdown chuẩn như sau (Tuyệt đối KHÔNG dùng ngoặc vuông [] bọc link ảnh):\n"
-            "**Tên sản phẩm**\n"
-            "Giá: Giá VNĐ\n"
-            "Mô tả: Mô tả ngắn\n\n"
-            "![Ảnh sản phẩm](LINK ẢNH TỪ DỮ LIỆU)\n\n"
-            "[Xem chi tiết và đặt hàng](LINK ĐẶT HÀNG TỪ DỮ LIỆU)"
+            "QUY TẮC QUAN TRỌNG NHẤT:\n"
+            "1. Dữ liệu sản phẩm ở trên ĐÃ ĐƯỢC ĐỊNH DẠNG SẴN BẰNG MARKDOWN (gồm Tên, Giá, Ảnh, Link đặt hàng).\n"
+            "2. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời của bạn. Tuyệt đối không được gộp chung, không được tự ý tóm tắt bỏ mất link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`). MỖI SẢN PHẨM PHẢI HIỂN THỊ ĐẦY ĐỦ ẢNH VÀ LINK RIÊNG!\n"
+            "3. Trả lời lịch sự, xưng 'Shop' gọi 'Bạn'."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
