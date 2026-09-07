@@ -53,8 +53,18 @@ class ChatbotService:
 
     def _sync_all_products_to_vector_db(self):
         """Hàm quét TOÀN BỘ sản phẩm của TẤT CẢ cửa hàng lưu vào Vector DB 1 lần"""
-        print("Syncing data from MongoDB to Vector DB...")
+        print("Checking if Vector DB needs syncing...")
 
+        try:
+            # Kiểm tra xem DB đã có dữ liệu chưa để tránh xóa nhầm khi chạy nhiều worker trên Render
+            existing_data = self.vector_db.get()
+            if existing_data and len(existing_data.get('ids', [])) > 0:
+                print(f"Vector DB already has {len(existing_data['ids'])} products. Skipping sync to prevent multi-worker conflicts on Render.")
+                return
+        except Exception:
+            pass
+
+        print("Syncing data from MongoDB to Vector DB...")
         try:
             self.vector_db.delete_collection()
         except Exception:
