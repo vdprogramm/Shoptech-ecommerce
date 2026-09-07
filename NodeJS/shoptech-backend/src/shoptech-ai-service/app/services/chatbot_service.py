@@ -247,6 +247,50 @@ class ChatbotService:
             except Exception as e:
                 print("Lỗi khi fetch flash sale:", e)
 
+        # --- TÌM KIẾM CỬA HÀNG NẾU NGƯỜI DÙNG HỎI ---
+        store_keywords = ['cửa hàng', 'shop', 'nhà cung cấp', 'gian hàng', 'đối tác']
+        is_asking_stores = any(kw in current_message.lower() for kw in store_keywords)
+        if is_asking_stores:
+            try:
+                active_stores = list(self.db.stores.find({"isActive": True}).limit(10))
+                if active_stores:
+                    db_results.append("THÔNG TIN CÁC CỬA HÀNG ĐANG HOẠT ĐỘNG:")
+                    for s in active_stores:
+                        s_name = s.get('name', 'Cửa hàng')
+                        s_addr = s.get('address', 'Đang cập nhật')
+                        s_phone = s.get('phone', 'Đang cập nhật')
+                        db_results.append(f"- Cửa hàng: **{s_name}** | Địa chỉ: {s_addr} | SĐT: {s_phone}")
+                else:
+                    db_results.append("Hiện tại chưa có cửa hàng nào đang hoạt động.")
+            except Exception as e:
+                print("Lỗi khi fetch stores:", e)
+
+        # --- TÌM KIẾM VOUCHER NẾU NGƯỜI DÙNG HỎI ---
+        voucher_keywords = ['voucher', 'mã giảm giá', 'coupon', 'code giảm giá']
+        is_asking_vouchers = any(kw in current_message.lower() for kw in voucher_keywords)
+        if is_asking_vouchers:
+            try:
+                from datetime import datetime
+                now = datetime.utcnow()
+                active_vouchers = list(self.db.vouchers.find({
+                    "isActive": True,
+                    "expirationDate": {"$gt": now},
+                    "$expr": {"$lt": ["$usedCount", "$usageLimit"]}
+                }).limit(5))
+                if active_vouchers:
+                    db_results.append("THÔNG TIN CÁC VOUCHER/MÃ GIẢM GIÁ ĐANG CÓ HIỆU LỰC:")
+                    for v in active_vouchers:
+                        code = v.get('code', '')
+                        discount = v.get('discountAmount', 0)
+                        dtype = v.get('discountType', 'fixed')
+                        min_order = v.get('minOrderValue', 0)
+                        discount_str = f"{discount} VNĐ" if dtype == 'fixed' else f"{discount}%"
+                        db_results.append(f"- Mã: **{code}** | Giảm: {discount_str} | Áp dụng cho đơn từ: {min_order} VNĐ")
+                else:
+                    db_results.append("Hiện tại hệ thống đã hết hoặc chưa có mã giảm giá (voucher) nào khả dụng.")
+            except Exception as e:
+                print("Lỗi khi fetch vouchers:", e)
+
         # TÌM KIẾM KEYWORD TỪ MONGODB (Khắc phục lỗi Vector Search kém với tiếng Việt không dấu)
         try:
             # Lấy các từ khóa dài hơn 2 ký tự để search regex
@@ -315,8 +359,8 @@ class ChatbotService:
             f"---\n{store_context}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT:\n"
             "1. KIỂM TRA ĐIỀU KIỆN GIÁ CẢ: Nếu khách hàng yêu cầu tìm sản phẩm với mức giá cụ thể (ví dụ: 'dưới 10 triệu'), BẠN BẮT BUỘC PHẢI lọc và chỉ giữ lại những sản phẩm thỏa mãn mức giá đó. TUYỆT ĐỐI KHÔNG ĐƯỢC đề xuất sản phẩm có giá vượt mức khách yêu cầu! Nếu không có sản phẩm nào thỏa mãn, hãy báo 'Shop không có sản phẩm phù hợp mức giá này'.\n"
-            "2. Dữ liệu sản phẩm ở trên ĐÃ ĐƯỢC ĐỊNH DẠNG SẴN BẰNG MARKDOWN (gồm Tên, Giá, Ảnh, Link đặt hàng).\n"
-            "3. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời của bạn. Tuyệt đối không được gộp chung, không được tự ý tóm tắt bỏ mất link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`). MỖI SẢN PHẨM PHẢI HIỂN THỊ ĐẦY ĐỦ ẢNH VÀ LINK RIÊNG!\n"
+            "2. ĐỐI VỚI DỮ LIỆU SẢN PHẨM: Đã được định dạng Markdown. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời, không được thay đổi Tên sản phẩm thành 'Cửa hàng', không được gộp chung, phải giữ nguyên link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`).\n"
+            "3. ĐỐI VỚI CÂU HỎI VỀ CỬA HÀNG VÀ VOUCHER: Hãy liệt kê danh sách một cách rõ ràng như trong dữ liệu cung cấp. KHÔNG ĐƯỢC lấy thông tin sản phẩm để chế thành mã giảm giá hoặc tên cửa hàng.\n"
             "4. Trả lời lịch sự, thân thiện, xưng 'Shop' gọi 'Bạn'."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
