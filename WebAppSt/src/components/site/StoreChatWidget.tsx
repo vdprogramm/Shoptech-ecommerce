@@ -1,6 +1,7 @@
 import { MessageCircle, X, Send } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { liveChatClient } from "@/lib/socket/live-chat-client";
+import { authService } from "@/lib/api/api-auth";
 
 interface Msg {
   role: "user" | "vendor" | "system";
@@ -30,11 +31,14 @@ export function StoreChatWidget({ storeId, storeName }: { storeId: string; store
 
   useEffect(() => {
     if (open) {
-      const gId = 'guest_' + Math.random().toString(36).substr(2, 9);
-      setGuestId(gId);
-      
-      // Pass guest role and storeId
-      liveChatClient.connect('guest', undefined, gId, storeId);
+      const user = authService.getCurrentUser();
+      if (user) {
+        liveChatClient.connect('user', user._id, undefined, storeId);
+      } else {
+        const gId = 'guest_' + Math.random().toString(36).substr(2, 9);
+        setGuestId(gId);
+        liveChatClient.connect('guest', undefined, gId, storeId);
+      }
       
       const handleReceive = (msg: any) => {
         // msg from vendor
@@ -58,10 +62,13 @@ export function StoreChatWidget({ storeId, storeName }: { storeId: string; store
     setMsgs(newMsgs);
     setInput("");
 
+    const user = authService.getCurrentUser();
     liveChatClient.sendMessage({
-      senderRole: "guest",
-      guestId: guestId,
+      senderRole: user ? "user" : "guest",
+      userId: user?._id,
+      guestId: !user ? guestId : undefined,
       storeId: storeId,
+      customerName: user ? user.fullName : "Khách ẩn danh",
       content: text,
     });
   };
@@ -77,7 +84,7 @@ export function StoreChatWidget({ storeId, storeName }: { storeId: string; store
       </button>
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 flex h-[480px] w-[350px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[480px] w-[350px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl">
           <div className="flex items-center justify-between p-4 text-white bg-blue-600">
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">

@@ -97,6 +97,9 @@ function StoreDetailPage() {
                 </span>
               </span>
             </div>
+            <div className="mt-4 flex justify-center md:justify-start">
+              <StoreChatWidget storeId={store._id} storeName={store.name} />
+            </div>
           </div>
 
           <div className="bg-secondary/30 rounded-xl p-4 text-center min-w-[150px]">
@@ -126,9 +129,6 @@ function StoreDetailPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-6 right-6 z-50">
-        <StoreChatWidget storeId={store._id} storeName={store.name} />
-      </div>
     </>
   );
 }
