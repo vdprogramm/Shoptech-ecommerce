@@ -103,7 +103,6 @@ class ChatbotService:
                 image_url = "null"
 
             slug = p.get('slug', prod_id)
-            frontend_url = "http://localhost:8080"
 
             content = (
                 f"Sản phẩm: {name}. "
@@ -111,7 +110,7 @@ class ChatbotService:
                 f"Giá: {price} VNĐ. "
                 f"Mô tả: {desc}. "
                 f"\nLINK ẢNH: {image_url}\n"
-                f"LINK ĐẶT HÀNG: {frontend_url}/product/{slug}\n"
+                f"LINK ĐẶT HÀNG: /product/{slug}\n"
             )
 
             doc = Document(
@@ -195,7 +194,7 @@ class ChatbotService:
                                 f"Chương trình: {campaign}. "
                                 f"Sản phẩm: {name} (SKU: {sku}). "
                                 f"Giá Gốc: {prod.get('price', 0)} VNĐ -> GIÁ FLASH SALE: {sale_price} VNĐ. "
-                                f"\nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: http://localhost:8080/product/{slug}\n"
+                                f"\nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: /product/{slug}\n"
                             )
                             db_results.append(f"- {content}")
                 else:
@@ -236,7 +235,7 @@ class ChatbotService:
 
                     content = (
                         f"Sản phẩm: {name}. Cửa hàng ID: {p.get('store', 'default')}. Giá: {price} VNĐ. "
-                        f"Mô tả: {desc}. \nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: http://localhost:8080/product/{slug}\n"
+                        f"Mô tả: {desc}. \nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: /product/{slug}\n"
                     )
                     db_results.append(f"- {content}")
         except Exception as e:
