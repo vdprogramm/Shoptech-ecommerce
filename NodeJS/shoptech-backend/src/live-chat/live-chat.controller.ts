@@ -25,4 +25,16 @@ export class LiveChatController {
       data: history,
     };
   }
+
+  @Get('user-conversations')
+  async getUserConversations(@Query('userId') userId: string) {
+    if (!userId) {
+      return { message: 'userId is required', data: [] };
+    }
+    const conversations = await this.liveChatService.getConversationsForUser(userId);
+    return {
+      message: 'Lấy danh sách hội thoại của khách hàng thành công',
+      data: conversations,
+    };
+  }
 }

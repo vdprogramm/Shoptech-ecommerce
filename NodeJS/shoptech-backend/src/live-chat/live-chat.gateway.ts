@@ -64,6 +64,7 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
       customerName?: string;
       senderRole: 'user' | 'vendor' | 'guest';
       content: string;
+      imageUrl?: string;
       conversationId?: string;
     },
     @ConnectedSocket() client: Socket,
@@ -92,6 +93,7 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
       senderRole: data.senderRole,
       senderId: data.senderRole === 'vendor' ? data.userId : data.userId,
       content: data.content,
+      imageUrl: data.imageUrl,
     });
 
     // 3. Broadcast
@@ -122,5 +124,23 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
   ) {
     client.join(conversationId);
     return { success: true };
+  }
+
+  @SubscribeMessage('revoke_message')
+  async handleRevokeMessage(
+    @MessageBody() data: { messageId: string; userId: string; storeId?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const message = await this.liveChatService.revokeMessage(data.messageId, data.userId);
+      // Broadcast to conversation room
+      this.server.to(message.conversationId.toString()).emit('message_revoked', { messageId: message._id });
+      if (data.storeId) {
+        this.server.to(`store_${data.storeId}`).emit('message_revoked', { messageId: message._id });
+      }
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
   }
 }

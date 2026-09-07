@@ -55,12 +55,14 @@ export class LiveChatService {
     senderRole: string; // 'user' | 'vendor' | 'guest'
     senderId?: string;
     content: string;
+    imageUrl?: string;
   }): Promise<LiveMessageDocument> {
     const message = new this.liveMessageModel({
       conversationId: new Types.ObjectId(data.conversationId),
       senderRole: data.senderRole,
       senderId: data.senderId ? new Types.ObjectId(data.senderId) : null,
       content: data.content,
+      imageUrl: data.imageUrl || null,
     });
 
     await message.save();
@@ -88,6 +90,29 @@ export class LiveChatService {
       .sort({ updatedAt: -1 })
       .populate('userId', 'fullName avatar') // populate user info if logged in
       .exec();
+  }
+
+  // 5. Get conversations for a specific user
+  async getConversationsForUser(userId: string): Promise<LiveConversationDocument[]> {
+    return this.liveConversationModel
+      .find({ userId: new Types.ObjectId(userId), status: 'active' })
+      .sort({ updatedAt: -1 })
+      .populate('storeId', 'name logoUrl') // populate store info
+      .exec();
+  }
+
+  // 6. Revoke message
+  async revokeMessage(messageId: string, userId: string): Promise<LiveMessageDocument> {
+    const message = await this.liveMessageModel.findById(messageId);
+    if (!message) throw new Error('Message not found');
+    
+    // Only allow revoking if senderId matches userId
+    if (message.senderId && message.senderId.toString() !== userId) {
+      throw new Error('Unauthorized to revoke this message');
+    }
+
+    message.isRevoked = true;
+    return message.save();
   }
 }
 

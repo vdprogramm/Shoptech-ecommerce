@@ -18,6 +18,12 @@ export class LiveMessage {
 
   @Prop({ type: String, required: true })
   content: string;
+
+  @Prop({ type: String, default: null })
+  imageUrl: string;
+
+  @Prop({ type: Boolean, default: false })
+  isRevoked: boolean;
 }
 
 export const LiveMessageSchema = SchemaFactory.createForClass(LiveMessage);
