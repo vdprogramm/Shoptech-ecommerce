@@ -33,6 +33,7 @@ import { NewsModule } from './news/news.module';
 import { VietqrModule } from './vietqr/vietqr.module';
 import { WarrantiesModule } from './warranties/warranties.module';
 import { PointsModule } from './points/points.module';
+import { LiveChatModule } from './live-chat/live-chat.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { PointsModule } from './points/points.module';
     VietqrModule,
     WarrantiesModule,
     PointsModule,
+    LiveChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
