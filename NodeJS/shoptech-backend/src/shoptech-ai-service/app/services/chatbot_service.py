@@ -16,7 +16,7 @@ class ChatbotService:
         self.db = self.db_client.get_database()
 
         # 2. Khởi tạo mô hình nhúng (DÙNG API MIỄN PHÍ ĐỂ TIẾT KIỆM RAM)
-        print(f"Đang kết nối API trích xuất vector: {settings.HF_EMBEDDING_MODEL}...")
+        print(f"Connecting to Vector API: {settings.HF_EMBEDDING_MODEL}...")
 
         # --- THAY ĐỔI 2: Dùng HuggingFaceEndpointEmbeddings thay vì tải Local ---
         self.embeddings = HuggingFaceEndpointEmbeddings(
@@ -25,7 +25,7 @@ class ChatbotService:
         )
 
         # 3. Khởi tạo LLM chính
-        print(f"Đang kết nối LLM: {settings.OPENROUTER_MODEL}...")
+        print(f"Connecting to LLM: {settings.OPENROUTER_MODEL}...")
         self.llm = ChatOpenAI(
             openai_api_base="https://openrouter.ai/api/v1",
             openai_api_key=settings.OPENROUTER_API_KEY,
@@ -53,7 +53,7 @@ class ChatbotService:
 
     def _sync_all_products_to_vector_db(self):
         """Hàm quét TOÀN BỘ sản phẩm của TẤT CẢ cửa hàng lưu vào Vector DB 1 lần"""
-        print("Đang đồng bộ dữ liệu từ MongoDB sang Vector DB...")
+        print("Syncing data from MongoDB to Vector DB...")
 
         try:
             self.vector_db.delete_collection()
@@ -68,7 +68,7 @@ class ChatbotService:
 
         products = list(self.db.products.find({}))
         if not products:
-            print("Không có sản phẩm nào trong database.")
+            print("No products found in database.")
             return
 
         documents = []
@@ -124,7 +124,7 @@ class ChatbotService:
             documents.append(doc)
 
         self.vector_db.add_documents(documents)
-        print(f"Đã đồng bộ {len(documents)} sản phẩm vào bộ não AI thành công!")
+        print(f"Successfully synced {len(documents)} products to AI brain!")
 
     async def generate_response(self, current_message: str, store_id: str, user_id: str, history: list) -> str:
         search_kwargs = {"k": 6}

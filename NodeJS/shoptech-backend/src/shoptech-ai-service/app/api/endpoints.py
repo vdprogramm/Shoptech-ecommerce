@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional, Any
-from app.agents.shop_agent import chatbot_service
+from app.services.chatbot_service import chatbot_service
 from app.services.recommend_service import recommend_service
 
 # 🔴 SỬA ĐỔI: Định nghĩa chuẩn prefix khớp với cổng gọi từ NestJS
