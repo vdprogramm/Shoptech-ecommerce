@@ -314,9 +314,10 @@ class ChatbotService:
             "DỮ LIỆU SẢN PHẨM HIỆN CÓ CỦA HỆ THỐNG:\n"
             f"---\n{store_context}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT:\n"
-            "1. Dữ liệu sản phẩm ở trên ĐÃ ĐƯỢC ĐỊNH DẠNG SẴN BẰNG MARKDOWN (gồm Tên, Giá, Ảnh, Link đặt hàng).\n"
-            "2. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời của bạn. Tuyệt đối không được gộp chung, không được tự ý tóm tắt bỏ mất link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`). MỖI SẢN PHẨM PHẢI HIỂN THỊ ĐẦY ĐỦ ẢNH VÀ LINK RIÊNG!\n"
-            "3. Trả lời lịch sự, xưng 'Shop' gọi 'Bạn'."
+            "1. KIỂM TRA ĐIỀU KIỆN GIÁ CẢ: Nếu khách hàng yêu cầu tìm sản phẩm với mức giá cụ thể (ví dụ: 'dưới 10 triệu'), BẠN BẮT BUỘC PHẢI lọc và chỉ giữ lại những sản phẩm thỏa mãn mức giá đó. TUYỆT ĐỐI KHÔNG ĐƯỢC đề xuất sản phẩm có giá vượt mức khách yêu cầu! Nếu không có sản phẩm nào thỏa mãn, hãy báo 'Shop không có sản phẩm phù hợp mức giá này'.\n"
+            "2. Dữ liệu sản phẩm ở trên ĐÃ ĐƯỢC ĐỊNH DẠNG SẴN BẰNG MARKDOWN (gồm Tên, Giá, Ảnh, Link đặt hàng).\n"
+            "3. BẠN BẮT BUỘC PHẢI COPY Y NGUYÊN từng khối Markdown của các sản phẩm đó vào câu trả lời của bạn. Tuyệt đối không được gộp chung, không được tự ý tóm tắt bỏ mất link ảnh (`![Ảnh sản phẩm](...)`) và link mua hàng (`[Xem chi tiết...](...)`). MỖI SẢN PHẨM PHẢI HIỂN THỊ ĐẦY ĐỦ ẢNH VÀ LINK RIÊNG!\n"
+            "4. Trả lời lịch sự, thân thiện, xưng 'Shop' gọi 'Bạn'."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
