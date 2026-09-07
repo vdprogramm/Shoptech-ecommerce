@@ -280,7 +280,7 @@ class ChatbotService:
 
                     content = (
                         f"**{name}**\n"
-                        f"Giá: {price} VNĐ (Cửa hàng: {p.get('store', 'default')})\n"
+                        f"Giá: {price} VNĐ\n"
                         f"Mô tả: {desc}\n\n"
                         f"![Ảnh sản phẩm]({image_url})\n\n"
                         f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
