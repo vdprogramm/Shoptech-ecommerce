@@ -73,7 +73,7 @@ class ChatbotService:
             )
 
             # Create the Agent dynamically with the specific prompt for this user
-            agent = create_react_agent(self.llm, tools=self.tools, state_modifier=system_prompt)
+            agent = create_react_agent(self.llm, tools=self.tools, prompt=system_prompt)
 
             # Append the current message
             formatted_history.append(HumanMessage(content=current_message))
