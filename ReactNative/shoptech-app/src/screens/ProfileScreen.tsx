@@ -133,6 +133,7 @@ export default function ProfileScreen() {
                     <Text style={styles.cardTitle}>Tiện ích cá nhân</Text>
                     <MenuItem icon="person-circle-outline" title="Thông tin tài khoản" onPress={() => navigation.navigate('AccountInfo')} iconColor="#333" />
                     <MenuItem icon="heart-circle-outline" title="Sản phẩm yêu thích" onPress={() => navigation.navigate('Wishlist')} iconColor="#cb1c22" />
+                    <MenuItem icon="chatbubble-ellipses-outline" title="Tin nhắn cửa hàng" onPress={() => navigation.navigate('CustomerMessages')} iconColor="#007bff" />
                     <MenuItem icon="location-outline" title="Sổ địa chỉ nhận hàng" onPress={() => navigation.navigate('AddressBook')} iconColor="#333" showBorder={false} />
                 </View>
 

@@ -16,6 +16,8 @@ import UtilityScreen from '../screens/UtilityScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+import CustomerMessagesScreen from '../screens/CustomerMessagesScreen';
+
 function ProfileStack() {
     return (
         <Stack.Navigator>
@@ -28,6 +30,11 @@ function ProfileStack() {
                 name="AdminDashboard"
                 component={AdminDashboardScreen}
                 options={{ title: 'Thống kê doanh thu' }}
+            />
+            <Stack.Screen
+                name="CustomerMessages"
+                component={CustomerMessagesScreen}
+                options={{ title: 'Tin nhắn cửa hàng' }}
             />
         </Stack.Navigator>
     );

@@ -1,28 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, SafeAreaView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 import io from 'socket.io-client';
+import axiosClient, { BASE_URL } from '../api/axiosClient';
+import * as ImagePicker from 'expo-image-picker';
 
-const SOCKET_URL = 'http://10.0.2.2:5000/live-chat'; // Ensure to use local IP if physical device, or 10.0.2.2 for emulator
+const SOCKET_URL = 'https://shoptech-api-ytxj.onrender.com/live-chat';
 
 export default function LiveChatScreen() {
     const route = useRoute<any>();
     const navigation = useNavigation();
     const user = useAuthStore((state) => state.user);
-    const { storeId, storeName } = route.params || {};
+    const { storeId, storeName, conversationId: passedConvId } = route.params || {};
     
     const [socket, setSocket] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [input, setInput] = useState('');
     const [guestId, setGuestId] = useState('');
+    const [conversationId, setConversationId] = useState<string | null>(passedConvId || null);
+    const [isUploading, setIsUploading] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
         if (!storeId) return;
 
-        // Generate a random guest ID if user is not logged in
+        // Fetch history
+        const loadHistory = async () => {
+            if (user) {
+                try {
+                    let cId = conversationId;
+                    if (!cId) {
+                        const convsRes: any = await axiosClient.get(`/live-chat/user-conversations?userId=${user._id}`);
+                        const convs = convsRes.data || [];
+                        const existingConv = convs.find((c: any) => c.storeId?._id === storeId || c.storeId === storeId);
+                        if (existingConv) {
+                            cId = existingConv._id;
+                            setConversationId(cId);
+                        }
+                    }
+                    if (cId) {
+                        const historyRes: any = await axiosClient.get(`/live-chat/history/${cId}`);
+                        setMessages(historyRes.data || []);
+                        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 200);
+                    }
+                } catch (e) {
+                    console.log('Error loading history', e);
+                }
+            }
+        };
+        loadHistory();
+
+        // Socket setup
         let currentGuestId = '';
         if (!user) {
             currentGuestId = 'guest_' + Math.random().toString(36).substr(2, 9);
@@ -43,8 +73,16 @@ export default function LiveChatScreen() {
 
         newSocket.on('receive_message', (msg: any) => {
             setMessages((prev) => [...prev, msg]);
-            // Scroll to bottom
+            if (!conversationId && msg.conversationId) {
+                setConversationId(msg.conversationId);
+            }
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        });
+
+        newSocket.on('message_revoked', (data: any) => {
+            setMessages((prev) => 
+                prev.map(m => m._id === data.messageId ? { ...m, isRevoked: true } : m)
+            );
         });
 
         return () => {
@@ -61,20 +99,107 @@ export default function LiveChatScreen() {
             guestId: guestId,
             storeId: storeId,
             customerName: user ? user.fullName : 'Khách hàng',
-            content: input
+            content: input,
+            conversationId: conversationId
         });
 
         setInput('');
     };
 
+    const handleRevoke = (messageId: string) => {
+        if (!socket || !user || !storeId) return;
+        socket.emit('revoke_message', {
+            messageId,
+            userId: user._id,
+            storeId: storeId
+        });
+    };
+
+    const onLongPressMessage = (item: any) => {
+        if (item.senderRole === 'user' && !item.isRevoked && user) {
+            Alert.alert("Thu hồi tin nhắn", "Bạn có chắc chắn muốn thu hồi tin nhắn này không?", [
+                { text: "Hủy", style: "cancel" },
+                { text: "Thu hồi", onPress: () => handleRevoke(item._id), style: "destructive" }
+            ]);
+        }
+    };
+
+    const pickImage = async () => {
+        if (!user) {
+            Alert.alert("Thông báo", "Vui lòng đăng nhập để gửi ảnh");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            uploadImage(result.assets[0].uri);
+        }
+    };
+
+    const uploadImage = async (uri: string) => {
+        setIsUploading(true);
+        const formData = new FormData();
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : `image`;
+
+        formData.append('file', {
+            uri,
+            name: filename || 'image.jpg',
+            type
+        } as any);
+
+        try {
+            const res: any = await axiosClient.post('/files/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const fullImageUrl = `${BASE_URL}${res.path}`;
+            
+            socket.emit('send_message', {
+                senderRole: 'user',
+                userId: user?._id,
+                guestId: guestId,
+                storeId: storeId,
+                customerName: user ? user.fullName : 'Khách hàng',
+                content: 'Đã gửi một ảnh',
+                imageUrl: fullImageUrl,
+                conversationId: conversationId
+            });
+        } catch (error) {
+            console.error('Error uploading image', error);
+            Alert.alert("Lỗi", "Không thể gửi ảnh lúc này");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const renderMessage = ({ item }: { item: any }) => {
         const isMe = item.senderRole === 'user' || item.senderRole === 'guest';
+        
         return (
-            <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-                <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
-                    {item.content}
-                </Text>
-            </View>
+            <TouchableOpacity 
+                style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage, item.isRevoked && styles.revokedMessage]}
+                onLongPress={() => onLongPressMessage(item)}
+                activeOpacity={0.8}
+            >
+                {item.isRevoked ? (
+                    <Text style={[styles.messageText, styles.revokedText]}>Tin nhắn đã bị thu hồi</Text>
+                ) : (
+                    <>
+                        {item.imageUrl && (
+                            <Image source={{ uri: item.imageUrl }} style={styles.messageImage} />
+                        )}
+                        <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+                            {item.content}
+                        </Text>
+                    </>
+                )}
+            </TouchableOpacity>
         );
     };
 
@@ -94,19 +219,22 @@ export default function LiveChatScreen() {
                 <FlatList
                     ref={flatListRef}
                     data={messages}
-                    keyExtractor={(item, index) => index.toString()}
+                    keyExtractor={(item, index) => item._id || index.toString()}
                     renderItem={renderMessage}
                     contentContainerStyle={styles.messageList}
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="chatbubbles-outline" size={50} color="#ccc" />
-                            <Text style={styles.emptyText}>Bắt đầu trò chuyện với nhân viên hỗ trợ</Text>
+                            <Text style={styles.emptyText}>Bắt đầu trò chuyện với cửa hàng</Text>
                         </View>
                     }
                 />
 
                 <View style={styles.inputContainer}>
+                    <TouchableOpacity style={styles.attachButton} onPress={pickImage} disabled={isUploading}>
+                        <Ionicons name="image-outline" size={24} color={isUploading ? "#ccc" : "#007bff"} />
+                    </TouchableOpacity>
                     <TextInput
                         style={styles.input}
                         placeholder="Nhập tin nhắn..."
@@ -119,7 +247,7 @@ export default function LiveChatScreen() {
                         onPress={sendMessage}
                         disabled={!input.trim()}
                     >
-                        <Ionicons name="send" size={20} color="#fff" />
+                        <Ionicons name="send" size={18} color="#fff" />
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
@@ -133,7 +261,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingTop: 50,
+        paddingTop: Platform.OS === 'android' ? 40 : 10,
         paddingBottom: 15,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
@@ -153,7 +281,7 @@ const styles = StyleSheet.create({
     },
     myMessage: {
         alignSelf: 'flex-end',
-        backgroundColor: '#007bff',
+        backgroundColor: '#cb1c22',
         borderBottomRightRadius: 4,
     },
     theirMessage: {
@@ -163,9 +291,17 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#eee',
     },
+    revokedMessage: {
+        backgroundColor: '#f0f0f0',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderStyle: 'dashed',
+    },
     messageText: { fontSize: 15, lineHeight: 20 },
     myMessageText: { color: '#fff' },
     theirMessageText: { color: '#333' },
+    revokedText: { color: '#888', fontStyle: 'italic', fontSize: 13 },
+    messageImage: { width: 200, height: 150, borderRadius: 10, marginBottom: 8 },
     inputContainer: {
         flexDirection: 'row',
         padding: 10,
@@ -174,6 +310,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#eee',
         alignItems: 'center',
     },
+    attachButton: { padding: 8, marginRight: 5 },
     input: {
         flex: 1,
         backgroundColor: '#f1f1f1',
@@ -184,15 +321,15 @@ const styles = StyleSheet.create({
         maxHeight: 100,
     },
     sendButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#007bff',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#cb1c22',
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 10,
     },
     sendButtonDisabled: {
-        backgroundColor: '#a0c4ff',
+        backgroundColor: '#ffb3b6',
     },
 });
