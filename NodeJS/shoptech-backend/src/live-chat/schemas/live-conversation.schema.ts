@@ -23,9 +23,13 @@ export class LiveConversation {
   @Prop({ type: String, default: '' })
   lastMessage: string;
 
-  // Optional: The admin who is currently handling this conversation
+  // Cửa hàng mà khách hàng đang nhắn tin
+  @Prop({ type: Types.ObjectId, ref: 'Store', required: true })
+  storeId: Types.ObjectId;
+
+  // Người bán (Chủ cửa hàng/nhân viên) đang trả lời tin nhắn này
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-  adminId: Types.ObjectId;
+  vendorId: Types.ObjectId;
 }
 
 export const LiveConversationSchema = SchemaFactory.createForClass(LiveConversation);

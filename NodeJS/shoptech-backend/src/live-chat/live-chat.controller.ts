@@ -6,8 +6,11 @@ export class LiveChatController {
   constructor(private readonly liveChatService: LiveChatService) {}
 
   @Get('conversations')
-  async getActiveConversations() {
-    const conversations = await this.liveChatService.getActiveConversations();
+  async getActiveConversations(@Query('storeId') storeId: string) {
+    if (!storeId) {
+      return { message: 'storeId is required', data: [] };
+    }
+    const conversations = await this.liveChatService.getConversationsForStore(storeId);
     return {
       message: 'Lấy danh sách hội thoại thành công',
       data: conversations,

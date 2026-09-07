@@ -11,21 +11,25 @@ export class LiveChatService {
     @InjectModel(LiveMessage.name) private liveMessageModel: Model<LiveMessageDocument>,
   ) {}
 
-  // 1. Get or create conversation for user/guest
+  // 1. Get or create conversation for user/guest in a specific store
   async getOrCreateConversation(data: {
+    storeId: string;
     userId?: string;
     guestId?: string;
     customerName?: string;
   }): Promise<LiveConversationDocument> {
     let conversation;
+    const storeObjectId = new Types.ObjectId(data.storeId);
 
     if (data.userId) {
       conversation = await this.liveConversationModel.findOne({
+        storeId: storeObjectId,
         userId: new Types.ObjectId(data.userId),
         status: 'active',
       });
     } else if (data.guestId) {
       conversation = await this.liveConversationModel.findOne({
+        storeId: storeObjectId,
         guestId: data.guestId,
         status: 'active',
       });
@@ -33,6 +37,7 @@ export class LiveChatService {
 
     if (!conversation) {
       conversation = new this.liveConversationModel({
+        storeId: storeObjectId,
         userId: data.userId ? new Types.ObjectId(data.userId) : null,
         guestId: data.guestId || null,
         customerName: data.customerName || 'Khách hàng',
@@ -47,7 +52,7 @@ export class LiveChatService {
   // 2. Save a new message
   async saveMessage(data: {
     conversationId: string;
-    senderRole: string; // 'user' | 'admin' | 'guest'
+    senderRole: string; // 'user' | 'vendor' | 'guest'
     senderId?: string;
     content: string;
   }): Promise<LiveMessageDocument> {
@@ -76,12 +81,13 @@ export class LiveChatService {
       .exec();
   }
 
-  // 4. Admin: Get all active conversations
-  async getActiveConversations(): Promise<LiveConversationDocument[]> {
+  // 4. Vendor: Get all active conversations for a specific store
+  async getConversationsForStore(storeId: string): Promise<LiveConversationDocument[]> {
     return this.liveConversationModel
-      .find({ status: 'active' })
+      .find({ storeId: new Types.ObjectId(storeId), status: 'active' })
       .sort({ updatedAt: -1 })
       .populate('userId', 'fullName avatar') // populate user info if logged in
       .exec();
   }
 }
+

@@ -36,16 +36,15 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
     console.log(`🔴 LiveChat Disconnected: ${client.id}`);
   }
 
-  // Admin or User joins
+  // Vendor or User joins
   @SubscribeMessage('register')
   handleRegister(
-    @MessageBody() data: { role: string; userId?: string; guestId?: string },
+    @MessageBody() data: { role: string; storeId?: string; userId?: string; guestId?: string },
     @ConnectedSocket() client: Socket,
   ) {
-    if (data.role === 'admin') {
-      this.adminSockets.add(client.id);
-      client.join('admins');
-      console.log(`👨‍💼 Admin registered: ${client.id}`);
+    if (data.role === 'vendor' && data.storeId) {
+      client.join(`store_${data.storeId}`);
+      console.log(`👨‍💼 Vendor registered for store ${data.storeId}: ${client.id}`);
     } else {
       const id = data.userId || data.guestId;
       if (id) {
@@ -59,10 +58,11 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
   @SubscribeMessage('send_message')
   async handleSendMessage(
     @MessageBody() data: {
+      storeId?: string;
       userId?: string;
       guestId?: string;
       customerName?: string;
-      senderRole: 'user' | 'admin' | 'guest';
+      senderRole: 'user' | 'vendor' | 'guest';
       content: string;
       conversationId?: string;
     },
@@ -72,13 +72,15 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     // 1. Get or create conversation if user/guest sends a message
     if (data.senderRole === 'user' || data.senderRole === 'guest') {
+      if (!data.storeId) return { error: 'storeId is required' };
       conversation = await this.liveChatService.getOrCreateConversation({
+        storeId: data.storeId,
         userId: data.userId,
         guestId: data.guestId,
         customerName: data.customerName,
       });
     } else if (data.conversationId) {
-      // Admin replying to existing conversation
+      // Vendor replying to existing conversation
       conversation = { _id: data.conversationId };
     }
 
@@ -88,32 +90,26 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
     const message = await this.liveChatService.saveMessage({
       conversationId: conversation._id.toString(),
       senderRole: data.senderRole,
-      senderId: data.senderRole === 'admin' ? data.userId : data.userId, // simplified
+      senderId: data.senderRole === 'vendor' ? data.userId : data.userId,
       content: data.content,
     });
 
     // 3. Broadcast
-    if (data.senderRole === 'admin') {
-      // Send to specific user/guest
-      const customerId = data.userId || data.guestId; // Need the customer ID to route.
-      // Wait, we need to know who the customer is based on conversation.
-      // For simplicity, we can broadcast the message to the "admins" room, and also to the specific customer socket if online.
-      
-      // Let's emit back to the admin who sent it (to confirm)
-      // And emit to the specific customer. In this request, if we don't have customerId, we'd need to fetch conversation.
-      // But let's assume the frontend sends the target `customerId` or we broadcast to a conversation room.
-      
-      // Better approach: everyone joins a room based on conversationId.
+    if (data.senderRole === 'vendor') {
+      // Broadcast to conversation room
       this.server.to(conversation._id.toString()).emit('receive_message', message);
       
-      // Also notify all admins to update their list
-      this.server.to('admins').emit('conversation_updated', conversation);
-
+      // Also notify vendor room (in case they have multiple tabs open)
+      if (data.storeId) {
+        this.server.to(`store_${data.storeId}`).emit('conversation_updated', conversation);
+      }
     } else {
       // Customer sends message
       this.server.to(conversation._id.toString()).emit('receive_message', message);
-      this.server.to('admins').emit('receive_message', message);
-      this.server.to('admins').emit('conversation_updated', conversation);
+      if (data.storeId) {
+        this.server.to(`store_${data.storeId}`).emit('receive_message', message);
+        this.server.to(`store_${data.storeId}`).emit('conversation_updated', conversation);
+      }
     }
 
     return message;
