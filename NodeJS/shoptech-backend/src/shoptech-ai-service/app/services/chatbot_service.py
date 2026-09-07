@@ -112,7 +112,6 @@ class ChatbotService:
                 clean_image_path = raw_image.lstrip('/')
                 if clean_image_path.startswith('uploads/'):
                     clean_image_path = clean_image_path.replace('uploads/', '', 1)
-
                 image_url = f"{backend_render_url}/uploads/{clean_image_path}"
             else:
                 image_url = raw_image or "null"
@@ -122,12 +121,14 @@ class ChatbotService:
 
             slug = p.get('slug', prod_id)
 
+            img_markdown = f"![Ảnh sản phẩm]({image_url})\n\n" if image_url != "null" and image_url.startswith("http") else ""
+
             content = (
-                f"**{name}**\n"
-                f"Giá: {price} VNĐ\n"
-                f"Danh mục: {cat_name} | Thương hiệu: {brand_name}\n"
+                f"**{name}**\n\n"
+                f"Giá: {price} VNĐ\n\n"
+                f"Danh mục: {cat_name} | Thương hiệu: {brand_name}\n\n"
                 f"Mô tả: {desc}\n\n"
-                f"![Ảnh sản phẩm]({image_url})\n\n"
+                f"{img_markdown}"
                 f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
             )
 
@@ -187,7 +188,14 @@ class ChatbotService:
                             s_status = so.get('status', 'Pending')
                             all_statuses.append(s_status)
                             for item in so.get('items', []):
-                                items_str.append(f"{item.get('name')} (x{item.get('quantity')})")
+                                item_name = item.get('name', '')
+                                if not item_name or item_name.lower() == 'sản phẩm':
+                                    try:
+                                        p_doc = self.db.products.find_one({"_id": item.get('product')})
+                                        if p_doc:
+                                            item_name = p_doc.get('name', 'Sản phẩm')
+                                    except: pass
+                                items_str.append(f"{item_name} (x{item.get('quantity')})")
                         
                         summary_status = "Đang xử lý"
                         if "Cancelled" in all_statuses: summary_status = "Đã hủy"
@@ -253,11 +261,14 @@ class ChatbotService:
                                 image_url = f"{backend_render_url}/uploads/{clean}"
                             else:
                                 image_url = raw_image or "null"
+                            
+                            if len(image_url) > 500: image_url = "null"
+                            img_markdown = f"![Ảnh sản phẩm]({image_url})\n\n" if image_url != "null" and image_url.startswith("http") else ""
 
                             content = (
-                                f"**{name}** (Chương trình: {campaign})\n"
+                                f"**{name}** (Chương trình: {campaign})\n\n"
                                 f"Giá Gốc: {prod.get('price', 0)} VNĐ -> **GIÁ FLASH SALE: {sale_price} VNĐ**\n\n"
-                                f"![Ảnh sản phẩm]({image_url})\n\n"
+                                f"{img_markdown}"
                                 f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
                             )
                             db_results.append(content)
@@ -368,12 +379,14 @@ class ChatbotService:
                         image_url = f"{backend_render_url}/uploads/{clean}"
                     else:
                         image_url = raw_image or "null"
+                    
+                    img_markdown = f"![Ảnh sản phẩm]({image_url})\n\n" if image_url != "null" and image_url.startswith("http") else ""
 
                     content = (
-                        f"**{name}**\n"
-                        f"Giá: {price} VNĐ\n"
+                        f"**{name}**\n\n"
+                        f"Giá: {price} VNĐ\n\n"
                         f"Mô tả: {desc}\n\n"
-                        f"![Ảnh sản phẩm]({image_url})\n\n"
+                        f"{img_markdown}"
                         f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
                     )
                     db_results.append(content)
