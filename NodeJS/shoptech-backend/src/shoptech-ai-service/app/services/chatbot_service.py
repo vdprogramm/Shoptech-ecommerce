@@ -166,14 +166,21 @@ class ChatbotService:
             query=current_message,
             **search_kwargs
         )
-
+        
         db_results = []
         user_behavior_context = ""
+        user_name = "Khách hàng"
         
         # --- RECOMMENDATION SYSTEM: LẤY HÀNH VI NGƯỜI DÙNG (GIỎ HÀNG & LỊCH SỬ MUA HÀNG) ---
         if user_id:
             try:
                 from bson.objectid import ObjectId
+                
+                # Lấy tên khách hàng
+                user_doc = self.db.users.find_one({"_id": ObjectId(user_id)})
+                if user_doc and user_doc.get("fullName"):
+                    user_name = user_doc.get("fullName")
+                
                 # 1. Đọc Giỏ hàng (Cart)
                 cart = self.db.carts.find_one({"user": ObjectId(user_id)})
                 if cart and cart.get('items'):
@@ -477,7 +484,7 @@ class ChatbotService:
         store_context_for_llm = "\n".join(llm_context_list) if llm_context_list else "Hiện tại không tìm thấy dữ liệu nào phù hợp."
 
         scope_text = "toàn bộ cửa hàng trên sàn" if is_global_search else f"cửa hàng {store_id}"
-        user_identity = f"Mã ID của khách hàng đang chat là: {user_id}." if user_id else "Khách hàng hiện tại là Khách vãng lai (chưa đăng nhập)."
+        user_identity = f"Khách hàng đang chat với bạn tên là: {user_name}." if user_id else "Khách hàng hiện tại là Khách vãng lai (chưa đăng nhập)."
 
         behavior_prompt = ""
         if user_behavior_context:
