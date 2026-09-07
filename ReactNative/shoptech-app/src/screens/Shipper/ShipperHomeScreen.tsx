@@ -208,7 +208,7 @@ export default function ShipperHomeScreen() {
                     <View style={styles.userInfo}>
                         <View style={styles.avatarWrap}>
                             <Image
-                                source={{ uri: user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar}`) : 'https://ui-avatars.com/api/?name=' + (user?.fullName || 'Shipper') + '&background=random' }}
+                                source={{ uri: user?.avatar ? (user.avatar.startsWith('http') || user.avatar.startsWith('data:') ? user.avatar : `${BASE_URL}${user.avatar}`) : 'https://ui-avatars.com/api/?name=' + (user?.fullName || 'Shipper') + '&background=random' }}
                                 style={styles.avatar}
                             />
                             <View style={[styles.activeDot, { backgroundColor: isActive ? '#4cd964' : '#ccc' }]} />

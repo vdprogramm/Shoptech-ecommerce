@@ -13,9 +13,9 @@ export default function PaymentWebViewScreen() {
     const handleNavigationStateChange = (navState: any) => {
         const url = navState.url;
 
-        // TỐI QUAN TRỌNG: Chỉ bắt khi Backend ĐÃ XỬ LÝ XONG và chủ động đá về 'payment-result'
-        // Tuyệt đối KHÔNG bắt 'vnpay_return' để Backend có cơ hội nhận dữ liệu
-        const isFrontendRedirect = url.includes('payment-result');
+        // TỐI QUAN TRỌNG: Chỉ bắt khi Backend ĐÃ XỬ LÝ XONG và chủ động đá về trang frontend (bất kể đường dẫn là gì)
+        // Dấu hiệu: URL có chứa vnp_ResponseCode nhưng KHÔNG phải là vnpay_return (vì vnpay_return là của backend đang xử lý)
+        const isFrontendRedirect = url.includes('vnp_ResponseCode=') && !url.includes('vnpay_return');
 
         if (isFrontendRedirect) {
             // Lúc này Backend đã cập nhật 'Paid' xong, ta mới phanh WebView lại 
@@ -50,10 +50,18 @@ export default function PaymentWebViewScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Cổng thanh toán VNPAY</Text>
             </View>
+            {/* Đã xóa dòng debug URL tĩnh */}
             <WebView
                 ref={webViewRef}
+                style={{ flex: 1, opacity: 0.99, minHeight: 1 }}
                 source={{ uri: paymentUrl }}
                 startInLoadingState={true}
+                originWhitelist={['*']}
+                mixedContentMode="always"
+                thirdPartyCookiesEnabled={true}
+                sharedCookiesEnabled={true}
+                allowFileAccess={true}
+                javaScriptCanOpenWindowsAutomatically={true}
                 renderLoading={() => (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#d70018" />

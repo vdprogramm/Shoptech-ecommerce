@@ -25,7 +25,7 @@ export default {
         backgroundColor: "#ffffff"
       },
       package: IS_SHIPPER ? "com.shoptech.shipper" : "com.shoptech.app",
-      edgeToEdgeEnabled: true,
+      edgeToEdgeEnabled: false,
       predictiveBackGestureEnabled: false,
       usesCleartextTraffic: true
     },

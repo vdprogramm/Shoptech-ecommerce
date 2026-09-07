@@ -75,7 +75,7 @@ export default function ProfileScreen() {
                         <View style={styles.avatarContainer}>
                             <View style={styles.avatarCircle}>
                                 {currentUser?.avatar ? (
-                                    <Image source={{ uri: currentUser.avatar.startsWith('http') ? currentUser.avatar : `${BASE_URL}${currentUser.avatar}` }} style={{ width: '100%', height: '100%', borderRadius: 32 }} />
+                                    <Image source={{ uri: currentUser.avatar.startsWith('http') || currentUser.avatar.startsWith('data:') ? currentUser.avatar : `${BASE_URL}${currentUser.avatar}` }} style={{ width: '100%', height: '100%', borderRadius: 32 }} />
                                 ) : (
                                     <Ionicons name="person" size={40} color="#cb1c22" />
                                 )}

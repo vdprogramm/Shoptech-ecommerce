@@ -107,7 +107,7 @@ export function ShipperPersonalInfoScreen() {
                             <View style={styles.avatarCircle}>
                                 {user?.avatar ? (
                                     <Image
-                                        source={{ uri: user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar}` }}
+                                        source={{ uri: user.avatar.startsWith('http') || user.avatar.startsWith('data:') ? user.avatar : `${BASE_URL}${user.avatar}` }}
                                         style={styles.avatarImage}
                                     />
                                 ) : (

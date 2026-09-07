@@ -9,10 +9,11 @@
     "android": "expo run:android",
     "android:customer": "cross-env APP_VARIANT=customer expo run:android",
     "android:shipper": "cross-env APP_VARIANT=shipper expo run:android",
-    "build:apk:customer": "cross-env APP_VARIANT=customer ./android/gradlew assembleDebug",
-    "build:apk:shipper": "cross-env APP_VARIANT=shipper ./android/gradlew assembleDebug",
+    "build:apk:customer": "cross-env APP_VARIANT=customer npx expo prebuild --platform android --clean && cd android && gradlew assembleRelease",
+    "build:apk:shipper": "cross-env APP_VARIANT=shipper npx expo prebuild --platform android --clean && cd android && gradlew assembleRelease",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/metro-config": "~54.0.14",
@@ -42,7 +43,7 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-webview": "13.15.0",
-    "socket.io-client": "^4.7.5",
+    "socket.io-client": "^4.8.3",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -52,6 +53,8 @@
     "@types/react": "~19.1.0",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "babel-preset-expo": "^57.0.9",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "typescript": "~5.9.2"
   },
   "private": true

@@ -44,6 +44,7 @@ import FlashSaleScreen from './src/screens/FlashSaleScreen';
 import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
 import PaymentResultScreen from './src/screens/PaymentResultScreen';
 import OrderTrackingDriverScreen from './src/screens/OrderTrackingDriverScreen';
+import LiveChatScreen from './src/screens/LiveChatScreen'; 
 
 const Stack = createNativeStackNavigator();
 
@@ -137,6 +138,7 @@ export default function App() {
                 <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
                 <Stack.Screen name="WarrantyLookup" component={WarrantyLookupScreen} />
                 <Stack.Screen name="ContactConsultation" component={ContactConsultationScreen} />
+                <Stack.Screen name="LiveChat" component={LiveChatScreen} />
                 <Stack.Screen name="Vouchers" component={VoucherScreen} />
                 <Stack.Screen name="FlashSale" component={FlashSaleScreen} />
                 <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
