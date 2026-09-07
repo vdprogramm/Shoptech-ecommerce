@@ -82,6 +82,24 @@ class ChatbotService:
 
             store_id = str(p.get('store', 'default_store'))
             prod_id = str(p.get('_id'))
+            
+            # Lấy tên Danh mục & Thương hiệu (tạm lấy ID nếu chưa có map, nhưng ưu tiên tên)
+            cat_id = p.get('category')
+            brand_id = p.get('brand')
+            cat_name = "Chưa rõ"
+            brand_name = "Chưa rõ"
+            if cat_id:
+                try:
+                    from bson.objectid import ObjectId
+                    c_doc = self.db.categories.find_one({"_id": ObjectId(str(cat_id))})
+                    if c_doc: cat_name = c_doc.get('name', 'Chưa rõ')
+                except: pass
+            if brand_id:
+                try:
+                    from bson.objectid import ObjectId
+                    b_doc = self.db.brands.find_one({"_id": ObjectId(str(brand_id))})
+                    if b_doc: brand_name = b_doc.get('name', 'Chưa rõ')
+                except: pass
 
             raw_image = str(p.get('images', [''])[0] if p.get('images') else '')
 
@@ -107,6 +125,7 @@ class ChatbotService:
             content = (
                 f"**{name}**\n"
                 f"Giá: {price} VNĐ\n"
+                f"Danh mục: {cat_name} | Thương hiệu: {brand_name}\n"
                 f"Mô tả: {desc}\n\n"
                 f"![Ảnh sản phẩm]({image_url})\n\n"
                 f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
@@ -321,10 +340,12 @@ class ChatbotService:
         try:
             # Lấy các từ khóa dài hơn 2 ký tự để search regex
             words = current_message.split()
-            search_terms = [w for w in words if len(w) >= 3 and w.lower() not in ['cho', 'tôi', 'mua', 'tìm', 'xem', 'cái', 'có', 'không', 'những', 'loại']]
+            ignore_words = ['cho', 'tôi', 'mua', 'tìm', 'xem', 'cái', 'có', 'không', 'những', 'loại', 'sản', 'phẩm', 'các', 'một']
+            search_terms = [w for w in words if len(w) >= 3 and w.lower() not in ignore_words]
             
             if search_terms:
                 regex_queries = [{"name": {"$regex": term, "$options": "i"}} for term in search_terms]
+                # Thêm tìm kiếm theo danh mục (category name) bằng cách join nếu cần, nhưng đơn giản nhất là map danh mục ở fallback
                 query_filter = {"$or": regex_queries}
                 if not is_global_search:
                     query_filter["store"] = store_id
