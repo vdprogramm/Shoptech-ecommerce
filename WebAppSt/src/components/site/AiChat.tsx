@@ -112,13 +112,12 @@ export function AiChat() {
                 className={m.role === "user" ? "flex justify-end" : "flex justify-start"}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed overflow-hidden ${
-                    m.role === "user"
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed overflow-hidden ${m.role === "user"
                       ? "bg-primary text-primary-foreground rounded-tr-none"
                       : m.role === "system"
-                      ? "bg-transparent text-muted-foreground border-none text-center italic text-xs mx-auto"
-                      : "bg-secondary text-secondary-foreground rounded-tl-none border"
-                  }`}
+                        ? "bg-transparent text-muted-foreground border-none text-center italic text-xs mx-auto"
+                        : "bg-secondary text-secondary-foreground rounded-tl-none border"
+                    }`}
                 >
                   {/* 🟢 Render Markdown */}
                   {m.role === "ai" ? (
