@@ -158,6 +158,7 @@ class ChatbotService:
         )
 
         db_results = []
+        user_behavior_context = ""
         
         # --- RECOMMENDATION SYSTEM: LẤY HÀNH VI NGƯỜI DÙNG (GIỎ HÀNG & LỊCH SỬ MUA HÀNG) ---
         if user_id:
@@ -178,7 +179,7 @@ class ChatbotService:
                                     cart_products.append(product.get('name', ''))
                     if cart_products:
                         cart_str = ", ".join(list(set(cart_products)))
-                        db_results.append(f"[THÔNG TIN HÀNH VI]: Khách hàng hiện đang có các sản phẩm sau trong GIỎ HÀNG: {cart_str}. Hãy khéo léo nhắc hoặc đề xuất sản phẩm liên quan.")
+                        user_behavior_context += f"- Khách đang có trong giỏ hàng: {cart_str}.\n"
                 
                 # 2. Đọc Đơn hàng gần nhất (Recent Order)
                 last_order = self.db.orders.find_one({"user": ObjectId(user_id)}, sort=[("createdAt", -1)])
@@ -195,7 +196,7 @@ class ChatbotService:
                             order_items.append(item_name)
                     if order_items:
                         order_str = ", ".join(list(set(order_items)))
-                        db_results.append(f"[THÔNG TIN HÀNH VI]: Lần gần nhất khách hàng đã mua: {order_str}.")
+                        user_behavior_context += f"- Gần đây khách đã mua: {order_str}.\n"
             except Exception as e:
                 print("Lỗi hệ thống đề xuất:", e)
 
@@ -468,10 +469,19 @@ class ChatbotService:
         scope_text = "toàn bộ cửa hàng trên sàn" if is_global_search else f"cửa hàng {store_id}"
         user_identity = f"Mã ID của khách hàng đang chat là: {user_id}." if user_id else "Khách hàng hiện tại là Khách vãng lai (chưa đăng nhập)."
 
+        behavior_prompt = ""
+        if user_behavior_context:
+            behavior_prompt = (
+                "THÔNG TIN HÀNH VI CỦA KHÁCH HÀNG (RẤT QUAN TRỌNG):\n"
+                f"{user_behavior_context}\n"
+                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG nhắc đến các sản phẩm trong giỏ hàng hoặc lịch sử mua hàng để khơi gợi nhu cầu (Upsell/Cross-sell). Ví dụ: 'Chào bạn, Shop thấy bạn đang quan tâm [Tên SP] trong giỏ hàng...'\n\n"
+            )
+
         system_instruction = (
             f"Bạn là trợ lý ảo thông minh ShopTech AI.\n"
             f"Bạn đang đại diện hỗ trợ tư vấn cho: {scope_text}.\n"
             f"{user_identity}\n\n"
+            f"{behavior_prompt}"
             "DANH SÁCH DỮ LIỆU TÌM ĐƯỢC (Đã được đánh mã [P1], [P2]...):\n"
             f"---\n{store_context_for_llm}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
