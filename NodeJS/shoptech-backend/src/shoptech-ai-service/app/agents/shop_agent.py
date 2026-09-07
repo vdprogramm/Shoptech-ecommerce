@@ -1,6 +1,5 @@
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.config import settings
 from app.tools.shop_tools import (
@@ -34,33 +33,6 @@ class ChatbotService:
             get_store_policies
         ]
 
-        self.prompt = ChatPromptTemplate.from_messages([
-            (
-                "system",
-                "Bạn là trợ lý ảo thông minh AI Agent của hệ thống thương mại điện tử ShopTech.\n"
-                "Nhiệm vụ của bạn là tư vấn sản phẩm, quản lý đơn hàng, thông báo flash sale/khuyến mãi và giải đáp chính sách.\n"
-                "THÔNG TIN HIỆN TẠI:\n"
-                "- Mã khách hàng (user_id): {user_id}\n"
-                "- Mã cửa hàng đang xem (store_id): {store_id}\n\n"
-                "QUY TẮC BẮT BUỘC:\n"
-                "1. Bạn PHẢI sử dụng các công cụ (tools) được cung cấp để tra cứu dữ liệu (như tìm sản phẩm, kiểm tra đơn hàng, xem flash sale).\n"
-                "2. Tuyệt đối KHÔNG tự bịa ra thông tin sản phẩm, giá cả, mã đơn hàng hay mã giảm giá.\n"
-                "3. Khi tư vấn sản phẩm/flash sale, hãy trình bày kèm ảnh và link mua hàng (nếu có từ tool) bằng Markdown chuẩn: `![Tên](Link ảnh)` và `[Xem chi tiết và đặt hàng](Link đặt hàng)`.\n"
-                "4. Trả lời lịch sự, thân thiện, xưng 'Shop' và gọi khách là 'Bạn'."
-            ),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
-
-        self.agent = create_tool_calling_agent(self.llm, self.tools, self.prompt)
-        self.agent_executor = AgentExecutor(
-            agent=self.agent,
-            tools=self.tools,
-            verbose=True,
-            handle_parsing_errors=True
-        )
-
     async def generate_response(self, current_message: str, store_id: str, user_id: str, history: list) -> str:
         try:
             MAX_HISTORY = 6
@@ -87,15 +59,32 @@ class ChatbotService:
                 elif final_role == "system":
                     formatted_history.append(SystemMessage(content=content))
 
-            # Thực thi Agent xử lý câu hỏi
-            response = await self.agent_executor.ainvoke({
-                "input": current_message,
-                "chat_history": formatted_history,
-                "user_id": user_id if user_id else "Khách vãng lai (null)",
-                "store_id": store_id if store_id else "default_store"
-            })
+            system_prompt = (
+                "Bạn là trợ lý ảo thông minh AI Agent của hệ thống thương mại điện tử ShopTech.\n"
+                "Nhiệm vụ của bạn là tư vấn sản phẩm, quản lý đơn hàng, thông báo flash sale/khuyến mãi và giải đáp chính sách.\n"
+                "THÔNG TIN HIỆN TẠI:\n"
+                f"- Mã khách hàng (user_id): {user_id if user_id else 'Khách vãng lai'}\n"
+                f"- Mã cửa hàng đang xem (store_id): {store_id if store_id else 'default_store'}\n\n"
+                "QUY TẮC BẮT BUỘC:\n"
+                "1. Bạn PHẢI sử dụng các công cụ (tools) được cung cấp để tra cứu dữ liệu (như tìm sản phẩm, kiểm tra đơn hàng, xem flash sale).\n"
+                "2. Tuyệt đối KHÔNG tự bịa ra thông tin sản phẩm, giá cả, mã đơn hàng hay mã giảm giá.\n"
+                "3. Khi tư vấn sản phẩm/flash sale, hãy trình bày kèm ảnh và link mua hàng (nếu có từ tool) bằng Markdown chuẩn: `![Tên](Link ảnh)` và `[Xem chi tiết và đặt hàng](Link đặt hàng)`.\n"
+                "4. Trả lời lịch sự, thân thiện, xưng 'Shop' và gọi khách là 'Bạn'."
+            )
 
-            clean_reply = response.get("output", "Xin lỗi bạn, Shop chưa hiểu rõ yêu cầu lắm.")
+            # Create the Agent dynamically with the specific prompt for this user
+            agent = create_react_agent(self.llm, tools=self.tools, state_modifier=system_prompt)
+
+            # Append the current message
+            formatted_history.append(HumanMessage(content=current_message))
+            
+            # Execute the Agent
+            response = await agent.ainvoke({"messages": formatted_history})
+            
+            # Retrieve the final AI message from the response
+            last_message = response["messages"][-1]
+            clean_reply = last_message.content
+
             return clean_reply.replace("<pad>", "").strip()
 
         except Exception as e:
