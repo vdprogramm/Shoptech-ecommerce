@@ -139,8 +139,71 @@ class ChatbotService:
             **search_kwargs
         )
 
-        # TÌM KIẾM KEYWORD TỪ MONGODB (Khắc phục lỗi Vector Search kém với tiếng Việt không dấu)
         db_results = []
+        
+        # --- TÌM KIẾM FLASH SALE NẾU NGƯỜI DÙNG HỎI ---
+        flash_sale_keywords = ['flash sale', 'flashsale', 'sale', 'khuyến mãi', 'giảm giá', 'giá hời', 'ưu đãi']
+        is_asking_flash_sale = any(kw in current_message.lower() for kw in flash_sale_keywords)
+
+        if is_asking_flash_sale:
+            try:
+                from datetime import datetime
+                now = datetime.utcnow()
+                pipeline = [
+                    {"$match": {"isActive": True, "startTime": {"$lte": now}, "endTime": {"$gte": now}}},
+                    {"$unwind": "$items"},
+                    {"$lookup": {
+                        "from": "productvariants",
+                        "localField": "items.variant",
+                        "foreignField": "_id",
+                        "as": "variantInfo"
+                    }},
+                    {"$unwind": {"path": "$variantInfo", "preserveNullAndEmptyArrays": True}},
+                    {"$lookup": {
+                        "from": "products",
+                        "localField": "variantInfo.product",
+                        "foreignField": "_id",
+                        "as": "productInfo"
+                    }},
+                    {"$unwind": {"path": "$productInfo", "preserveNullAndEmptyArrays": True}}
+                ]
+                fs_items = list(self.db.flashsales.aggregate(pipeline))
+                
+                if fs_items:
+                    db_results.append("THÔNG TIN SỰ KIỆN FLASH SALE / GIÁ HỜI ĐANG DIỄN RA (Ưu tiên tư vấn):")
+                    for item in fs_items[:10]:
+                        campaign = item.get('campaignName', 'Flash Sale')
+                        sale_price = item.get('items', {}).get('salePrice', 0)
+                        prod = item.get('productInfo', {})
+                        var_info = item.get('variantInfo', {})
+                        if prod:
+                            name = prod.get('name', 'Sản phẩm')
+                            sku = var_info.get('sku', '')
+                            slug = prod.get('slug', str(prod.get('_id')))
+                            raw_image = str(prod.get('images', [''])[0] if prod.get('images') else '')
+                            backend_render_url = "https://shoptech-api-ytxj.onrender.com"
+                            if raw_image and raw_image.startswith('data:image/'):
+                                image_url = f"{backend_render_url}/products/{prod.get('_id')}/image?ext=.jpg"
+                            elif raw_image and not raw_image.startswith('http'):
+                                clean = raw_image.lstrip('/')
+                                if clean.startswith('uploads/'): clean = clean.replace('uploads/', '', 1)
+                                image_url = f"{backend_render_url}/uploads/{clean}"
+                            else:
+                                image_url = raw_image or "null"
+
+                            content = (
+                                f"Chương trình: {campaign}. "
+                                f"Sản phẩm: {name} (SKU: {sku}). "
+                                f"Giá Gốc: {prod.get('price', 0)} VNĐ -> GIÁ FLASH SALE: {sale_price} VNĐ. "
+                                f"\nLINK ẢNH: {image_url}\nLINK ĐẶT HÀNG: http://localhost:8080/product/{slug}\n"
+                            )
+                            db_results.append(f"- {content}")
+                else:
+                    db_results.append("Hiện tại hệ thống không có chương trình Flash Sale hoặc sự kiện giảm giá nào đang diễn ra.")
+            except Exception as e:
+                print("Lỗi khi fetch flash sale:", e)
+
+        # TÌM KIẾM KEYWORD TỪ MONGODB (Khắc phục lỗi Vector Search kém với tiếng Việt không dấu)
         try:
             # Lấy các từ khóa dài hơn 2 ký tự để search regex
             words = current_message.split()
