@@ -4,13 +4,13 @@ class LiveChatClient {
   private socket: Socket | null = null;
   private url = 'http://localhost:5000/live-chat'; // Ensure port matches backend
 
-  connect(role: string, userId?: string, guestId?: string) {
+  connect(role: string, userId?: string, guestId?: string, storeId?: string) {
     if (!this.socket) {
       this.socket = io(this.url, { transports: ['websocket'] });
       
       this.socket.on('connect', () => {
         console.log('LiveChat socket connected:', this.socket?.id);
-        this.socket?.emit('register', { role, userId, guestId });
+        this.socket?.emit('register', { role, userId, guestId, storeId });
       });
 
       this.socket.on('disconnect', () => {
@@ -27,10 +27,11 @@ class LiveChatClient {
   }
 
   sendMessage(data: {
+    storeId?: string;
     userId?: string;
     guestId?: string;
     customerName?: string;
-    senderRole: 'user' | 'admin' | 'guest';
+    senderRole: 'user' | 'vendor' | 'guest';
     content: string;
     conversationId?: string;
   }) {

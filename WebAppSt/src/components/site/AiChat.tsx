@@ -2,7 +2,6 @@ import { MessageCircle, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 // 🔴 IMPORT DỊCH VỤ API RIÊNG
 import { aiService } from "@/lib//api/api-ai";
-import { liveChatClient } from "@/lib/socket/live-chat-client";
 import ReactMarkdown from "react-markdown";
 
 interface Msg {
@@ -27,8 +26,6 @@ export function AiChat() {
       text: "Xin chào! Tôi là trợ lý thông minh của ShopTech. Tôi có thể giúp bạn chọn sản phẩm phù hợp, tra cứu thông số kỹ thuật hoặc giải đáp thắc mắc 24/7.",
     },
   ]);
-  const [chatMode, setChatMode] = useState<"ai" | "live">("ai");
-  const [guestId, setGuestId] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,39 +36,6 @@ export function AiChat() {
   useEffect(() => {
     if (open) scrollToBottom();
   }, [msgs, open, isLoading]);
-
-  useEffect(() => {
-    if (chatMode === "live") {
-      const gId = 'guest_' + Math.random().toString(36).substr(2, 9);
-      setGuestId(gId);
-      
-      // Use localstorage logic to get real user if possible, here assuming guest for simplicity
-      liveChatClient.connect('guest', undefined, gId);
-      
-      const handleReceive = (msg: any) => {
-        if (msg.senderRole === "admin") {
-          setMsgs((prev) => [...prev, { role: "admin", text: msg.content }]);
-        }
-      };
-      liveChatClient.onReceiveMessage(handleReceive);
-
-      return () => {
-        liveChatClient.offReceiveMessage(handleReceive);
-        liveChatClient.disconnect();
-      };
-    }
-  }, [chatMode]);
-
-  const switchMode = () => {
-    if (chatMode === "ai") {
-      setChatMode("live");
-      setMsgs((prev) => [...prev, { role: "system", text: "Đang kết nối với nhân viên hỗ trợ..." }]);
-    } else {
-      setChatMode("ai");
-      liveChatClient.disconnect();
-      setMsgs((prev) => [...prev, { role: "system", text: "Đã chuyển về chế độ Chatbot AI." }]);
-    }
-  };
 
   // 🔴 LOGIC GỬI TIN NHẮN
   const send = async (text: string) => {
@@ -86,15 +50,6 @@ export function AiChat() {
     const newMsgs: Msg[] = [...msgs, { role: "user", text }];
     setMsgs(newMsgs);
     setInput("");
-
-    if (chatMode === "live") {
-      liveChatClient.sendMessage({
-        senderRole: "guest",
-        guestId: guestId,
-        content: text,
-      });
-      return;
-    }
 
     setIsLoading(true);
 
@@ -137,23 +92,17 @@ export function AiChat() {
         <div className="fixed bottom-24 right-6 z-40 flex h-[540px] w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-hover)]">
           <div
             className="flex items-center justify-between p-4 text-primary-foreground"
-            style={{ background: chatMode === "ai" ? "var(--gradient-hero)" : "#0068ff" }}
+            style={{ background: "var(--gradient-hero)" }}
           >
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-                {chatMode === "ai" ? <Sparkles className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+                <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <div className="font-bold">{chatMode === "ai" ? "Trợ lý ảo ShopTech AI" : "Nhân viên hỗ trợ"}</div>
-                <div className="text-xs opacity-90">{chatMode === "ai" ? "Mô hình Llama-3/Gemma-4 tích hợp" : "Trực tuyến"}</div>
+                <div className="font-bold">Trợ lý ảo ShopTech AI</div>
+                <div className="text-xs opacity-90">Mô hình Llama-3/Gemma-4 tích hợp</div>
               </div>
             </div>
-            <button 
-              onClick={switchMode}
-              className="text-xs underline bg-white/20 px-2 py-1 rounded-md"
-            >
-              {chatMode === "ai" ? "Gặp nhân viên" : "Dùng AI"}
-            </button>
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">

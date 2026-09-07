@@ -5,6 +5,7 @@ import { productService, type Product } from "@/lib/api/api-product";
 import { PageHeader, Breadcrumb } from "@/components/site/PageHeader";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Store, MapPin, Phone, ExternalLink } from "lucide-react";
+import { StoreChatWidget } from "@/components/site/StoreChatWidget";
 
 export const Route = createFileRoute("/_site/store/$id")({
   component: StoreDetailPage,
@@ -123,6 +124,10 @@ function StoreDetailPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="fixed bottom-6 right-6 z-50">
+        <StoreChatWidget storeId={store._id} storeName={store.name} />
       </div>
     </>
   );

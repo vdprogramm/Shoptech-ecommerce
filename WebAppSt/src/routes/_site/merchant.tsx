@@ -115,6 +115,13 @@ function MerchantLayout() {
           >
             🎟️ Quản lý Voucher
           </Link>
+
+          <Link
+            to="/merchant/chat"
+            className="block px-4 py-2.5 rounded hover:bg-slate-800 transition text-gray-300 [&.active]:bg-red-600 [&.active]:text-white [&.active]:font-medium"
+          >
+            💬 Tin nhắn khách hàng
+          </Link>
         </nav>
 
         {/* Footer Sidebar */}

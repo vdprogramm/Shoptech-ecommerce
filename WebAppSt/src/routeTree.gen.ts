@@ -46,6 +46,7 @@ import { Route as SiteMerchantOrdersRouteImport } from './routes/_site/merchant/
 import { Route as SiteMerchantInventoryRouteImport } from './routes/_site/merchant/inventory'
 import { Route as SiteMerchantFlashSalesRouteImport } from './routes/_site/merchant/flash-sales'
 import { Route as SiteMerchantDashboardRouteImport } from './routes/_site/merchant/dashboard'
+import { Route as SiteMerchantChatRouteImport } from './routes/_site/merchant/chat'
 import { Route as SiteMerchantCategoriesRouteImport } from './routes/_site/merchant/categories'
 import { Route as SiteMerchantBrandsRouteImport } from './routes/_site/merchant/brands'
 import { Route as SiteCategorySlugRouteImport } from './routes/_site/category.$slug'
@@ -253,6 +254,11 @@ const SiteMerchantDashboardRoute = SiteMerchantDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => SiteMerchantRoute,
 } as any)
+const SiteMerchantChatRoute = SiteMerchantChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => SiteMerchantRoute,
+} as any)
 const SiteMerchantCategoriesRoute = SiteMerchantCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
@@ -408,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/category/$slug': typeof SiteCategorySlugRoute
   '/merchant/brands': typeof SiteMerchantBrandsRoute
   '/merchant/categories': typeof SiteMerchantCategoriesRoute
+  '/merchant/chat': typeof SiteMerchantChatRoute
   '/merchant/dashboard': typeof SiteMerchantDashboardRoute
   '/merchant/flash-sales': typeof SiteMerchantFlashSalesRoute
   '/merchant/inventory': typeof SiteMerchantInventoryRoute
@@ -466,6 +473,7 @@ export interface FileRoutesByTo {
   '/category/$slug': typeof SiteCategorySlugRoute
   '/merchant/brands': typeof SiteMerchantBrandsRoute
   '/merchant/categories': typeof SiteMerchantCategoriesRoute
+  '/merchant/chat': typeof SiteMerchantChatRoute
   '/merchant/dashboard': typeof SiteMerchantDashboardRoute
   '/merchant/flash-sales': typeof SiteMerchantFlashSalesRoute
   '/merchant/inventory': typeof SiteMerchantInventoryRoute
@@ -528,6 +536,7 @@ export interface FileRoutesById {
   '/_site/category/$slug': typeof SiteCategorySlugRoute
   '/_site/merchant/brands': typeof SiteMerchantBrandsRoute
   '/_site/merchant/categories': typeof SiteMerchantCategoriesRoute
+  '/_site/merchant/chat': typeof SiteMerchantChatRoute
   '/_site/merchant/dashboard': typeof SiteMerchantDashboardRoute
   '/_site/merchant/flash-sales': typeof SiteMerchantFlashSalesRoute
   '/_site/merchant/inventory': typeof SiteMerchantInventoryRoute
@@ -590,6 +599,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/merchant/brands'
     | '/merchant/categories'
+    | '/merchant/chat'
     | '/merchant/dashboard'
     | '/merchant/flash-sales'
     | '/merchant/inventory'
@@ -648,6 +658,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/merchant/brands'
     | '/merchant/categories'
+    | '/merchant/chat'
     | '/merchant/dashboard'
     | '/merchant/flash-sales'
     | '/merchant/inventory'
@@ -709,6 +720,7 @@ export interface FileRouteTypes {
     | '/_site/category/$slug'
     | '/_site/merchant/brands'
     | '/_site/merchant/categories'
+    | '/_site/merchant/chat'
     | '/_site/merchant/dashboard'
     | '/_site/merchant/flash-sales'
     | '/_site/merchant/inventory'
@@ -992,6 +1004,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteMerchantDashboardRouteImport
       parentRoute: typeof SiteMerchantRoute
     }
+    '/_site/merchant/chat': {
+      id: '/_site/merchant/chat'
+      path: '/chat'
+      fullPath: '/merchant/chat'
+      preLoaderRoute: typeof SiteMerchantChatRouteImport
+      parentRoute: typeof SiteMerchantRoute
+    }
     '/_site/merchant/categories': {
       id: '/_site/merchant/categories'
       path: '/categories'
@@ -1214,6 +1233,7 @@ const SiteAdminRouteWithChildren = SiteAdminRoute._addFileChildren(
 interface SiteMerchantRouteChildren {
   SiteMerchantBrandsRoute: typeof SiteMerchantBrandsRoute
   SiteMerchantCategoriesRoute: typeof SiteMerchantCategoriesRoute
+  SiteMerchantChatRoute: typeof SiteMerchantChatRoute
   SiteMerchantDashboardRoute: typeof SiteMerchantDashboardRoute
   SiteMerchantFlashSalesRoute: typeof SiteMerchantFlashSalesRoute
   SiteMerchantInventoryRoute: typeof SiteMerchantInventoryRoute
@@ -1227,6 +1247,7 @@ interface SiteMerchantRouteChildren {
 const SiteMerchantRouteChildren: SiteMerchantRouteChildren = {
   SiteMerchantBrandsRoute: SiteMerchantBrandsRoute,
   SiteMerchantCategoriesRoute: SiteMerchantCategoriesRoute,
+  SiteMerchantChatRoute: SiteMerchantChatRoute,
   SiteMerchantDashboardRoute: SiteMerchantDashboardRoute,
   SiteMerchantFlashSalesRoute: SiteMerchantFlashSalesRoute,
   SiteMerchantInventoryRoute: SiteMerchantInventoryRoute,
