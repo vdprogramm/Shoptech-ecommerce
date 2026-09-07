@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { User, Package, Heart, Bell, MapPin, LogOut, UserCircle } from "lucide-react";
+import { User, Package, Heart, Bell, MapPin, LogOut, UserCircle, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 // 🔴 IMPORT DỊCH VỤ API AUTH TẬP TRUNG
 import { authService } from "@/lib/api/api-auth";
@@ -7,6 +7,7 @@ import { authService } from "@/lib/api/api-auth";
 const menu = [
   { to: "/account", label: "Thông tin cá nhân", icon: User, exact: true },
   { to: "/account/orders", label: "Đơn hàng của tôi", icon: Package },
+  { to: "/account/messages", label: "Tin nhắn", icon: MessageCircle },
   { to: "/account/wishlist", label: "Sản phẩm yêu thích", icon: Heart },
   { to: "/account/notifications", label: "Thông báo", icon: Bell },
   { to: "/account/addresses", label: "Sổ địa chỉ", icon: MapPin },

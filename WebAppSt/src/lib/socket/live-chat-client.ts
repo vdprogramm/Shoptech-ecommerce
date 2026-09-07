@@ -33,9 +33,14 @@ class LiveChatClient {
     customerName?: string;
     senderRole: 'user' | 'vendor' | 'guest';
     content: string;
+    imageUrl?: string;
     conversationId?: string;
   }) {
     this.socket?.emit('send_message', data);
+  }
+
+  revokeMessage(data: { messageId: string; userId: string; storeId?: string }) {
+    this.socket?.emit('revoke_message', data);
   }
 
   joinConversation(conversationId: string) {
@@ -51,6 +56,18 @@ class LiveChatClient {
       this.socket?.off('receive_message', callback);
     } else {
       this.socket?.off('receive_message');
+    }
+  }
+
+  onMessageRevoked(callback: (data: { messageId: string }) => void) {
+    this.socket?.on('message_revoked', callback);
+  }
+
+  offMessageRevoked(callback?: (data: { messageId: string }) => void) {
+    if (callback) {
+      this.socket?.off('message_revoked', callback);
+    } else {
+      this.socket?.off('message_revoked');
     }
   }
 
