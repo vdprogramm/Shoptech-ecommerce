@@ -50,7 +50,6 @@ import { Route as SiteMerchantChatRouteImport } from './routes/_site/merchant/ch
 import { Route as SiteMerchantCategoriesRouteImport } from './routes/_site/merchant/categories'
 import { Route as SiteMerchantBrandsRouteImport } from './routes/_site/merchant/brands'
 import { Route as SiteCategorySlugRouteImport } from './routes/_site/category.$slug'
-import { Route as SiteAdminWarrantiesRouteImport } from './routes/_site/admin/warranties'
 import { Route as SiteAdminVouchersRouteImport } from './routes/_site/admin/vouchers'
 import { Route as SiteAdminUsersRouteImport } from './routes/_site/admin/users'
 import { Route as SiteAdminStoresRouteImport } from './routes/_site/admin/stores'
@@ -68,6 +67,7 @@ import { Route as SiteAdminBannersRouteImport } from './routes/_site/admin/banne
 import { Route as SiteAccountWishlistRouteImport } from './routes/_site/account/wishlist'
 import { Route as SiteAccountOrdersRouteImport } from './routes/_site/account/orders'
 import { Route as SiteAccountNotificationsRouteImport } from './routes/_site/account/notifications'
+import { Route as SiteAccountMessagesRouteImport } from './routes/_site/account/messages'
 import { Route as SiteAccountAddressesRouteImport } from './routes/_site/account/addresses'
 
 const SiteRoute = SiteRouteImport.update({
@@ -274,11 +274,6 @@ const SiteCategorySlugRoute = SiteCategorySlugRouteImport.update({
   path: '/category/$slug',
   getParentRoute: () => SiteRoute,
 } as any)
-const SiteAdminWarrantiesRoute = SiteAdminWarrantiesRouteImport.update({
-  id: '/warranties',
-  path: '/warranties',
-  getParentRoute: () => SiteAdminRoute,
-} as any)
 const SiteAdminVouchersRoute = SiteAdminVouchersRouteImport.update({
   id: '/vouchers',
   path: '/vouchers',
@@ -365,6 +360,11 @@ const SiteAccountNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => SiteAccountRoute,
   } as any)
+const SiteAccountMessagesRoute = SiteAccountMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => SiteAccountRoute,
+} as any)
 const SiteAccountAddressesRoute = SiteAccountAddressesRouteImport.update({
   id: '/addresses',
   path: '/addresses',
@@ -393,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/stores': typeof SiteStoresRoute
   '/verify-email': typeof SiteVerifyEmailRoute
   '/account/addresses': typeof SiteAccountAddressesRoute
+  '/account/messages': typeof SiteAccountMessagesRoute
   '/account/notifications': typeof SiteAccountNotificationsRoute
   '/account/orders': typeof SiteAccountOrdersRoute
   '/account/wishlist': typeof SiteAccountWishlistRoute
@@ -410,7 +411,6 @@ export interface FileRoutesByFullPath {
   '/admin/stores': typeof SiteAdminStoresRoute
   '/admin/users': typeof SiteAdminUsersRoute
   '/admin/vouchers': typeof SiteAdminVouchersRoute
-  '/admin/warranties': typeof SiteAdminWarrantiesRoute
   '/category/$slug': typeof SiteCategorySlugRoute
   '/merchant/brands': typeof SiteMerchantBrandsRoute
   '/merchant/categories': typeof SiteMerchantCategoriesRoute
@@ -452,6 +452,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof SiteVerifyEmailRoute
   '/': typeof SiteIndexRoute
   '/account/addresses': typeof SiteAccountAddressesRoute
+  '/account/messages': typeof SiteAccountMessagesRoute
   '/account/notifications': typeof SiteAccountNotificationsRoute
   '/account/orders': typeof SiteAccountOrdersRoute
   '/account/wishlist': typeof SiteAccountWishlistRoute
@@ -469,7 +470,6 @@ export interface FileRoutesByTo {
   '/admin/stores': typeof SiteAdminStoresRoute
   '/admin/users': typeof SiteAdminUsersRoute
   '/admin/vouchers': typeof SiteAdminVouchersRoute
-  '/admin/warranties': typeof SiteAdminWarrantiesRoute
   '/category/$slug': typeof SiteCategorySlugRoute
   '/merchant/brands': typeof SiteMerchantBrandsRoute
   '/merchant/categories': typeof SiteMerchantCategoriesRoute
@@ -515,6 +515,7 @@ export interface FileRoutesById {
   '/_site/verify-email': typeof SiteVerifyEmailRoute
   '/_site/': typeof SiteIndexRoute
   '/_site/account/addresses': typeof SiteAccountAddressesRoute
+  '/_site/account/messages': typeof SiteAccountMessagesRoute
   '/_site/account/notifications': typeof SiteAccountNotificationsRoute
   '/_site/account/orders': typeof SiteAccountOrdersRoute
   '/_site/account/wishlist': typeof SiteAccountWishlistRoute
@@ -532,7 +533,6 @@ export interface FileRoutesById {
   '/_site/admin/stores': typeof SiteAdminStoresRoute
   '/_site/admin/users': typeof SiteAdminUsersRoute
   '/_site/admin/vouchers': typeof SiteAdminVouchersRoute
-  '/_site/admin/warranties': typeof SiteAdminWarrantiesRoute
   '/_site/category/$slug': typeof SiteCategorySlugRoute
   '/_site/merchant/brands': typeof SiteMerchantBrandsRoute
   '/_site/merchant/categories': typeof SiteMerchantCategoriesRoute
@@ -578,6 +578,7 @@ export interface FileRouteTypes {
     | '/stores'
     | '/verify-email'
     | '/account/addresses'
+    | '/account/messages'
     | '/account/notifications'
     | '/account/orders'
     | '/account/wishlist'
@@ -595,7 +596,6 @@ export interface FileRouteTypes {
     | '/admin/stores'
     | '/admin/users'
     | '/admin/vouchers'
-    | '/admin/warranties'
     | '/category/$slug'
     | '/merchant/brands'
     | '/merchant/categories'
@@ -637,6 +637,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/'
     | '/account/addresses'
+    | '/account/messages'
     | '/account/notifications'
     | '/account/orders'
     | '/account/wishlist'
@@ -654,7 +655,6 @@ export interface FileRouteTypes {
     | '/admin/stores'
     | '/admin/users'
     | '/admin/vouchers'
-    | '/admin/warranties'
     | '/category/$slug'
     | '/merchant/brands'
     | '/merchant/categories'
@@ -699,6 +699,7 @@ export interface FileRouteTypes {
     | '/_site/verify-email'
     | '/_site/'
     | '/_site/account/addresses'
+    | '/_site/account/messages'
     | '/_site/account/notifications'
     | '/_site/account/orders'
     | '/_site/account/wishlist'
@@ -716,7 +717,6 @@ export interface FileRouteTypes {
     | '/_site/admin/stores'
     | '/_site/admin/users'
     | '/_site/admin/vouchers'
-    | '/_site/admin/warranties'
     | '/_site/category/$slug'
     | '/_site/merchant/brands'
     | '/_site/merchant/categories'
@@ -1032,13 +1032,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteCategorySlugRouteImport
       parentRoute: typeof SiteRoute
     }
-    '/_site/admin/warranties': {
-      id: '/_site/admin/warranties'
-      path: '/warranties'
-      fullPath: '/admin/warranties'
-      preLoaderRoute: typeof SiteAdminWarrantiesRouteImport
-      parentRoute: typeof SiteAdminRoute
-    }
     '/_site/admin/vouchers': {
       id: '/_site/admin/vouchers'
       path: '/vouchers'
@@ -1158,6 +1151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteAccountNotificationsRouteImport
       parentRoute: typeof SiteAccountRoute
     }
+    '/_site/account/messages': {
+      id: '/_site/account/messages'
+      path: '/messages'
+      fullPath: '/account/messages'
+      preLoaderRoute: typeof SiteAccountMessagesRouteImport
+      parentRoute: typeof SiteAccountRoute
+    }
     '/_site/account/addresses': {
       id: '/_site/account/addresses'
       path: '/addresses'
@@ -1170,6 +1170,7 @@ declare module '@tanstack/react-router' {
 
 interface SiteAccountRouteChildren {
   SiteAccountAddressesRoute: typeof SiteAccountAddressesRoute
+  SiteAccountMessagesRoute: typeof SiteAccountMessagesRoute
   SiteAccountNotificationsRoute: typeof SiteAccountNotificationsRoute
   SiteAccountOrdersRoute: typeof SiteAccountOrdersRoute
   SiteAccountWishlistRoute: typeof SiteAccountWishlistRoute
@@ -1178,6 +1179,7 @@ interface SiteAccountRouteChildren {
 
 const SiteAccountRouteChildren: SiteAccountRouteChildren = {
   SiteAccountAddressesRoute: SiteAccountAddressesRoute,
+  SiteAccountMessagesRoute: SiteAccountMessagesRoute,
   SiteAccountNotificationsRoute: SiteAccountNotificationsRoute,
   SiteAccountOrdersRoute: SiteAccountOrdersRoute,
   SiteAccountWishlistRoute: SiteAccountWishlistRoute,
@@ -1203,7 +1205,6 @@ interface SiteAdminRouteChildren {
   SiteAdminStoresRoute: typeof SiteAdminStoresRoute
   SiteAdminUsersRoute: typeof SiteAdminUsersRoute
   SiteAdminVouchersRoute: typeof SiteAdminVouchersRoute
-  SiteAdminWarrantiesRoute: typeof SiteAdminWarrantiesRoute
   SiteAdminIndexRoute: typeof SiteAdminIndexRoute
 }
 
@@ -1222,7 +1223,6 @@ const SiteAdminRouteChildren: SiteAdminRouteChildren = {
   SiteAdminStoresRoute: SiteAdminStoresRoute,
   SiteAdminUsersRoute: SiteAdminUsersRoute,
   SiteAdminVouchersRoute: SiteAdminVouchersRoute,
-  SiteAdminWarrantiesRoute: SiteAdminWarrantiesRoute,
   SiteAdminIndexRoute: SiteAdminIndexRoute,
 }
 

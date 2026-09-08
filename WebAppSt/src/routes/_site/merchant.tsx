@@ -95,6 +95,14 @@ function MerchantLayout() {
             👥 Quản lý nhân viên
           </Link>
 
+          <Link
+            to="/merchant/warranties"
+            className="block px-4 py-2.5 rounded hover:bg-slate-800 transition text-gray-300 [&.active]:bg-red-600 [&.active]:text-white [&.active]:font-medium"
+          >
+            🛡️ Quản lý bảo hành
+          </Link>
+
+
 
           <Link
             to="/merchant/flash-sales"

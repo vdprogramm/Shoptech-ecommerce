@@ -1,25 +1,15 @@
 import { axiosClient } from "./axios-client";
 
 export const apiWarranty = {
-  // Lấy tất cả bảo hành cho Admin
-  getAllWarranties: () => {
-    return axiosClient.get("/warranties");
-  },
-
-  // Lấy danh sách bảo hành của Merchant
+  // Lấy danh sách bảo hành của merchant (dựa trên storeId tự động trong token backend)
   getMerchantWarranties: () => {
     return axiosClient.get("/warranties/merchant");
   },
 
-  // Lấy danh sách bảo hành của User
-  getMyWarranties: () => {
-    return axiosClient.get("/warranties/my-warranties");
-  },
-
-  // Admin / Merchant tạo bảo hành mới
+  // (Tuỳ chọn) Tạo phiếu bảo hành thủ công
   createWarranty: (data: {
     userId: string;
-    orderId: string;
+    orderId?: string;
     productId: string;
     startDate: string;
     durationMonths: number;
@@ -27,13 +17,13 @@ export const apiWarranty = {
     return axiosClient.post("/warranties", data);
   },
 
-  // Admin / Merchant cập nhật bảo hành
+  // (Tuỳ chọn) Cập nhật phiếu bảo hành
   updateWarranty: (id: string, data: any) => {
     return axiosClient.patch(`/warranties/${id}`, data);
   },
 
-  // Admin / Merchant xóa bảo hành
+  // (Tuỳ chọn) Xóa phiếu bảo hành
   deleteWarranty: (id: string) => {
     return axiosClient.delete(`/warranties/${id}`);
-  },
+  }
 };
