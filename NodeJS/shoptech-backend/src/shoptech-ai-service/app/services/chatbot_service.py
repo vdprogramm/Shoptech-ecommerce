@@ -8,6 +8,11 @@ from app.config import settings
 # --- THAY ĐỔI 1: Import thư viện HuggingFace Endpoint ---
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 
+def format_currency(value):
+    try:
+        return "{:,.0f}".format(float(value)).replace(',', '.') + " ₫"
+    except:
+        return str(value) + " ₫"
 
 class ChatbotService:
     def __init__(self):
@@ -135,7 +140,7 @@ class ChatbotService:
 
             content = (
                 f"**{name}**\n\n"
-                f"Giá: {price} VNĐ\n\n"
+                f"Giá: {format_currency(price)}\n\n"
                 f"Danh mục: {cat_name} | Thương hiệu: {brand_name}\n\n"
                 f"Mô tả: {desc}\n\n"
                 f"{img_markdown}"
@@ -330,7 +335,7 @@ class ChatbotService:
                         elif "Delivered" in all_statuses: summary_status = "Đã giao thành công"
                         
                         items_joined = ", ".join(items_str)
-                        content = f"- Mã đơn: {code} | Trạng thái: {summary_status} | Thanh toán: {payment_status} | Tổng tiền: {total}đ | Sản phẩm: {items_joined}"
+                        content = f"- Mã đơn: {code} | Trạng thái: **{summary_status}** | Thanh toán: {payment_status} | Tổng tiền: **{format_currency(total)}** | Sản phẩm: {items_joined}"
                         db_results.append(content)
                 else:
                     db_results.append("Khách hàng hiện chưa có đơn hàng nào trong hệ thống, hoặc bạn chưa mua hàng.")
@@ -394,7 +399,7 @@ class ChatbotService:
 
                             content = (
                                 f"**{name}** (Chương trình: {campaign})\n\n"
-                                f"Giá Gốc: {prod.get('price', 0)} VNĐ -> **GIÁ FLASH SALE: {sale_price} VNĐ**\n\n"
+                                f"Giá Gốc: {format_currency(prod.get('price', 0))} -> **GIÁ FLASH SALE: {format_currency(sale_price)}**\n\n"
                                 f"{img_markdown}"
                                 f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
                             )
@@ -441,8 +446,8 @@ class ChatbotService:
                         discount = v.get('discountAmount', 0)
                         dtype = v.get('discountType', 'fixed')
                         min_order = v.get('minOrderValue', 0)
-                        discount_str = f"{discount} VNĐ" if dtype == 'fixed' else f"{discount}%"
-                        db_results.append(f"- Mã: **{code}** | Giảm: {discount_str} | Áp dụng cho đơn từ: {min_order} VNĐ")
+                        discount_str = format_currency(discount) if dtype == 'fixed' else f"{discount}%"
+                        db_results.append(f"- Mã: **{code}** | Giảm: {discount_str} | Áp dụng cho đơn từ: {format_currency(min_order)}")
                 else:
                     db_results.append("Hiện tại hệ thống đã hết hoặc chưa có mã giảm giá (voucher) nào khả dụng.")
             except Exception as e:
@@ -511,12 +516,12 @@ class ChatbotService:
                     
                     fs_tag = ""
                     if str(p.get('_id')) in flash_sale_map:
-                        fs_tag = f"🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {flash_sale_map[str(p.get('_id'))]} VNĐ (Giá gốc: {price} VNĐ)\n\n"
+                        fs_tag = f"🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {format_currency(flash_sale_map[str(p.get('_id'))])} (Giá gốc: {format_currency(price)})\n\n"
 
                     content = (
                         f"**{name}**\n\n"
                         f"{fs_tag}"
-                        f"Giá: {price} VNĐ\n\n"
+                        f"Giá: {format_currency(price)}\n\n"
                         f"Mô tả: {desc}\n\n"
                         f"{img_markdown}"
                         f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
@@ -532,7 +537,7 @@ class ChatbotService:
                 prod_id = doc.metadata.get('productId')
                 content = doc.page_content
                 if prod_id and str(prod_id) in flash_sale_map:
-                    content += f"\n\n🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {flash_sale_map[str(prod_id)]} VNĐ\n"
+                    content += f"\n\n🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {format_currency(flash_sale_map[str(prod_id)])}\n"
                 combined_context.append(f"- {content}")
         if db_results:
             combined_context.extend(db_results)
