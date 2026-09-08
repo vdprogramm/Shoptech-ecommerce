@@ -275,19 +275,16 @@ class ChatbotService:
                 ]
                 top_completed = list(self.db.orders.aggregate(completed_pipeline))
                 
-                db_results.append("THỐNG KÊ SẢN PHẨM MUA NHIỀU NHẤT VÀ HỦY NHIỀU NHẤT HỆ THỐNG:")
                 if top_completed:
-                    db_results.append("- Top Sản phẩm BÁN CHẠY NHẤT (Đã giao thành công):")
                     for stat in top_completed:
                         p_doc = self.db.products.find_one({"_id": stat['_id']})
                         if p_doc:
-                            db_results.append(f"  + **{p_doc.get('name', 'Sản phẩm')}** (Đã bán: {stat['count']} cái)")
+                            db_results.append(f"**[BÁN CHẠY NHẤT] {p_doc.get('name', 'Sản phẩm')}**\n\n(Đã bán: {stat['count']} cái)")
                 if top_cancelled:
-                    db_results.append("- Top Sản phẩm BỊ HỦY NHIỀU NHẤT:")
                     for stat in top_cancelled:
                         p_doc = self.db.products.find_one({"_id": stat['_id']})
                         if p_doc:
-                            db_results.append(f"  + **{p_doc.get('name', 'Sản phẩm')}** (Đã hủy: {stat['count']} cái)")
+                            db_results.append(f"**[HỦY NHIỀU NHẤT] {p_doc.get('name', 'Sản phẩm')}**\n\n(Đã hủy: {stat['count']} cái)")
             except Exception as e:
                 print("Lỗi khi fetch order stats:", e)
 
@@ -335,7 +332,7 @@ class ChatbotService:
                         elif "Delivered" in all_statuses: summary_status = "Đã giao thành công"
                         
                         items_joined = ", ".join(items_str)
-                        content = f"- Mã đơn: {code} | Trạng thái: **{summary_status}** | Thanh toán: {payment_status} | Tổng tiền: **{format_currency(total)}** | Sản phẩm: {items_joined}"
+                        content = f"**[ĐƠN HÀNG] {code}**\n\nTrạng thái: **{summary_status}** | Thanh toán: {payment_status} | Tổng tiền: **{format_currency(total)}**\n\nSản phẩm: {items_joined}"
                         db_results.append(content)
                 else:
                     db_results.append("Khách hàng hiện chưa có đơn hàng nào trong hệ thống, hoặc bạn chưa mua hàng.")
@@ -373,7 +370,6 @@ class ChatbotService:
                 fs_items = list(self.db.flashsales.aggregate(pipeline))
                 
                 if fs_items:
-                    db_results.append("THÔNG TIN SỰ KIỆN FLASH SALE / GIÁ HỜI ĐANG DIỄN RA (Ưu tiên tư vấn):")
                     for item in fs_items[:10]:
                         campaign = item.get('campaignName', 'Flash Sale')
                         sale_price = item.get('items', {}).get('salePrice', 0)
@@ -398,7 +394,8 @@ class ChatbotService:
                             img_markdown = f"![Ảnh sản phẩm]({image_url})\n\n" if image_url != "null" and image_url.startswith("http") else ""
 
                             content = (
-                                f"**{name}** (Chương trình: {campaign})\n\n"
+                                f"**[FLASH SALE] {name}**\n\n"
+                                f"Chương trình: {campaign}\n\n"
                                 f"Giá Gốc: {format_currency(prod.get('price', 0))} -> **GIÁ FLASH SALE: {format_currency(sale_price)}**\n\n"
                                 f"{img_markdown}"
                                 f"[Xem chi tiết và đặt hàng](/product/{slug})\n\n"
@@ -416,12 +413,11 @@ class ChatbotService:
             try:
                 active_stores = list(self.db.stores.find({"isActive": True}).limit(10))
                 if active_stores:
-                    db_results.append("THÔNG TIN CÁC CỬA HÀNG ĐANG HOẠT ĐỘNG:")
                     for s in active_stores:
                         s_name = s.get('name', 'Cửa hàng')
                         s_addr = s.get('address', 'Đang cập nhật')
                         s_phone = s.get('phone', 'Đang cập nhật')
-                        db_results.append(f"- Cửa hàng: **{s_name}** | Địa chỉ: {s_addr} | SĐT: {s_phone}")
+                        db_results.append(f"**[CỬA HÀNG] {s_name}**\n\nĐịa chỉ: {s_addr} | SĐT: {s_phone}")
                 else:
                     db_results.append("Hiện tại chưa có cửa hàng nào đang hoạt động.")
             except Exception as e:
@@ -440,14 +436,13 @@ class ChatbotService:
                     "$expr": {"$lt": ["$usedCount", "$usageLimit"]}
                 }).limit(5))
                 if active_vouchers:
-                    db_results.append("THÔNG TIN CÁC VOUCHER/MÃ GIẢM GIÁ ĐANG CÓ HIỆU LỰC:")
                     for v in active_vouchers:
                         code = v.get('code', '')
                         discount = v.get('discountAmount', 0)
                         dtype = v.get('discountType', 'fixed')
                         min_order = v.get('minOrderValue', 0)
                         discount_str = format_currency(discount) if dtype == 'fixed' else f"{discount}%"
-                        db_results.append(f"- Mã: **{code}** | Giảm: {discount_str} | Áp dụng cho đơn từ: {format_currency(min_order)}")
+                        db_results.append(f"**[VOUCHER] {code}**\n\nGiảm: {discount_str} | Áp dụng cho đơn từ: {format_currency(min_order)}")
                 else:
                     db_results.append("Hiện tại hệ thống đã hết hoặc chưa có mã giảm giá (voucher) nào khả dụng.")
             except Exception as e:
@@ -460,9 +455,8 @@ class ChatbotService:
             try:
                 categories = list(self.db.categories.find({}).limit(15))
                 if categories:
-                    db_results.append("DANH MỤC SẢN PHẨM HIỆN CÓ:")
                     for c in categories:
-                        db_results.append(f"- Danh mục: **{c.get('name', '')}**")
+                        db_results.append(f"**[DANH MỤC] {c.get('name', '')}**")
             except Exception as e:
                 print("Lỗi khi fetch categories:", e)
 
@@ -473,9 +467,8 @@ class ChatbotService:
             try:
                 brands = list(self.db.brands.find({}).limit(15))
                 if brands:
-                    db_results.append("CÁC THƯƠNG HIỆU/HÃNG ĐANG BÁN:")
                     for b in brands:
-                        db_results.append(f"- Thương hiệu: **{b.get('name', '')}**")
+                        db_results.append(f"**[THƯƠNG HIỆU] {b.get('name', '')}**")
             except Exception as e:
                 print("Lỗi khi fetch brands:", e)
 
@@ -559,7 +552,7 @@ class ChatbotService:
             price = "Chưa rõ"
             cat_brand = "Chưa rõ"
             for line in lines:
-                if line.startswith("Giá:"): price = line
+                if line.startswith("Giá:") or line.startswith("Giá Gốc:"): price = line
                 if line.startswith("Danh mục:"): cat_brand = line
             
             if name and not name.startswith('![') and not name.startswith('['):
