@@ -4,45 +4,43 @@ import { apiAdminStats } from "@/lib/api/admin/api-admin-stats";
 import { productService } from "@/lib/api/api-product";
 import { adminUserService } from "@/lib/api/api-user";
 import { orderService } from "@/lib/api/api-order";
-import axiosClient from "@/lib/api/axios-client";
 import {
-  ComposedChart,
+  BarChart,
   Bar,
-  Line,
-  LineChart,
-  PieChart,
-  Pie,
-  Cell,
-  FunnelChart as RechartsFunnelChart,
-  Funnel,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import {
   BarChart3,
   TrendingUp,
   PieChart as PieIcon,
-  Layers,
   Activity,
-  Columns,
+  Download,
+  FileText,
 } from "lucide-react";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_site/admin/")({
-  component: AdminDashboard,
+  component: AdminStatsPage,
 });
 
-const PALETTE = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#8b5cf6"];
+const PALETTE = ["#cb1c22", "#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#8b5cf6"];
 
-function AdminDashboard() {
+function AdminStatsPage() {
   const [stats, setStats] = useState({
-    todayRevenue: 0,
-    newOrders: 0,
-    newCustomers: 0,
-    stockProducts: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalProducts: 0,
+    totalUsers: 0,
   });
 
   const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -51,8 +49,10 @@ function AdminDashboard() {
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingWord, setIsExportingWord] = useState(false);
 
-  const fetchDashboardData = async () => {
+  const fetchStatsData = async () => {
     try {
       setIsLoading(true);
       const [
@@ -79,18 +79,9 @@ function AdminDashboard() {
       const usersRes = usersResult.status === "fulfilled" ? usersResult.value : null;
       const ordersRes = ordersResult.status === "fulfilled" ? ordersResult.value : null;
 
-      if (generalResult.status === "rejected")
-        console.error("Lỗi lấy thống kê chung:", generalResult.reason);
-      if (revenueResult.status === "rejected")
-        console.error("Lỗi lấy doanh thu:", revenueResult.reason);
-      if (topProductsResult.status === "rejected")
-        console.error("Lỗi lấy top sản phẩm:", topProductsResult.reason);
-
-      // Xử lý trường hợp backend trả về { data: ... }
       const generalRaw = generalRes?.data || generalRes;
       const generalData = Array.isArray(generalRaw) ? generalRaw[0] : generalRaw || {};
 
-      // Tính toán số lượng thực tế từ các API danh sách
       const productsArray = Array.isArray(productsRes)
         ? productsRes
         : (productsRes as any)?.data || [];
@@ -128,28 +119,11 @@ function AdminDashboard() {
           }, 0)
         : 0;
 
-      console.log("Debug General Data:", generalData);
-      console.log(
-        "Filtered Counts (Products, Users, Orders):",
-        actualProductCount,
-        actualUserCount,
-        actualOrderCount,
-      );
-      console.log("Filtered Delivered Revenue:", actualRevenue);
-
       setStats({
-        todayRevenue: useActualOrders
-          ? actualRevenue
-          : 0,
-        newOrders: useActualOrders
-          ? actualOrderCount
-          : 0,
-        newCustomers: usersArray.length > 0
-          ? actualUserCount
-          : 0,
-        stockProducts: actualProductCount > 0
-          ? actualProductCount
-          : generalData?.stockProducts || generalData?.totalProducts || 0,
+        totalRevenue: useActualOrders ? actualRevenue : 0,
+        totalOrders: useActualOrders ? actualOrderCount : 0,
+        totalProducts: actualProductCount > 0 ? actualProductCount : generalData?.totalProducts || generalData?.products || generalData?.productCount || generalData?.stockProducts || 0,
+        totalUsers: usersArray.length > 0 ? actualUserCount : 0,
       });
 
       // Generate daily chart data for the selected month
@@ -200,9 +174,23 @@ function AdminDashboard() {
                 subs.forEach((sub: any) => {
                   const items = sub.items || o.items || [];
                   items.forEach((item: any) => {
-                    const pId = item.productId || item._id || item.name;
-                    const name = item.name || "Sản phẩm";
+                    const pId =
+                      item.productId ||
+                      item.product?._id ||
+                      (typeof item.product === "string" ? item.product : null) ||
+                      item._id;
+                    let realName = item.name || item.product?.name || item.productName;
+
+                    if (!realName && pId && productsArray.length > 0) {
+                      const foundProduct = productsArray.find((p: any) => p._id === pId);
+                      if (foundProduct) {
+                        realName = foundProduct.name;
+                      }
+                    }
+
+                    const name = realName || `Sản phẩm ${String(pId).slice(-4)}`;
                     const qty = Number(item.quantity || item.qty || 1);
+
                     if (!productMap[pId]) productMap[pId] = { name, sold: 0 };
                     productMap[pId].sold += qty;
                   });
@@ -217,19 +205,40 @@ function AdminDashboard() {
       }
 
       setRevenueData(Array.isArray(rList) ? rList : []);
-      setTopProducts(Array.isArray(pList) ? pList : []);
+      const rawPList = Array.isArray(pList) ? pList : [];
+      const enrichedPList = rawPList.map((item: any) => {
+        const pId =
+          item.productId ||
+          item.product?._id ||
+          item._id ||
+          (typeof item.product === "string" ? item.product : null);
+        let realName = item.productName || item.product?.name || item.name || item.title;
+
+        if ((!realName || realName === "Sản phẩm") && pId) {
+          const foundProduct = productsArray.find((p: any) => String(p._id) === String(pId));
+          if (foundProduct) {
+            realName = foundProduct.name;
+          }
+        }
+
+        return {
+          ...item,
+          name: realName || `Sản phẩm ID: ${String(pId || "").slice(-4)}`,
+        };
+      });
+
+      setTopProducts(enrichedPList);
     } catch (err) {
-      console.error("Lỗi đồng bộ dữ liệu đồ thị tổng hợp:", err);
+      console.error("Lỗi đồng bộ dữ liệu thống kê:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchStatsData();
   }, [selectedYear, selectedMonth]);
 
-  // 1. Dữ liệu thực tế cho Bar, Column, Line, Combo Charts
   const hasRevenueData = revenueData.length > 0;
   const timeSeriesChartData = hasRevenueData
     ? revenueData.map((item: any, index: number) => ({
@@ -239,88 +248,176 @@ function AdminDashboard() {
       }))
     : [{ name: "Chưa có dữ liệu", "Doanh thu": 0, "Đơn hàng": 0 }];
 
-  // 2. Dữ liệu thực tế cho Pie Chart
   const hasPieData = topProducts.length > 0;
+
   const pieChartData = hasPieData
-    ? topProducts.map((item: any, index: number) => ({
-        name: item.name || item.productName || item.title || `Sản phẩm ${index + 1}`,
-        value: item.value || item.totalSold || item.sold || item.quantity || item.count || 0,
-      }))
+    ? topProducts
+        .map((item: any, index: number) => ({
+          name:
+            item.productName ||
+            item.product?.name ||
+            item.name ||
+            item.title ||
+            `Sản phẩm ${index + 1}`,
+          value: item.value || item.totalSold || item.sold || item.quantity || item.count || 0,
+        }))
+        .sort((a: any, b: any) => b.value - a.value)
     : [{ name: "Không có dữ liệu", value: 100, isFallback: true }];
-
-  // 3. Dữ liệu Funnel Chart
-  const funnelChartData = [
-    { value: stats.newCustomers * 4 || 0, name: "Xem sản phẩm", fill: "#3b82f6" },
-    { value: stats.newCustomers * 2 || 0, name: "Thêm vào giỏ", fill: "#f59e0b" },
-    { value: stats.newOrders || 0, name: "Tạo đơn hàng", fill: "hsl(var(--primary))" },
-  ];
-  const hasFunnelData = funnelChartData.some((d) => d.value > 0);
-
-  // 4. Dữ liệu Waterfall Chart (Bản sửa lỗi kết xuất thanh lơ lửng)
-  const waterfallChartData = [
-    { name: "Doanh thu", uv: [0, stats.todayRevenue], displayValue: stats.todayRevenue },
-    {
-      name: "Vận hành",
-      uv: [stats.todayRevenue * 0.8, stats.todayRevenue],
-      displayValue: -(stats.todayRevenue * 0.2),
-    },
-    {
-      name: "Nhập hàng",
-      uv: [stats.todayRevenue * 0.3, stats.todayRevenue * 0.8],
-      displayValue: -(stats.todayRevenue * 0.5),
-    },
-    {
-      name: "Lợi nhuận",
-      uv: [0, stats.todayRevenue * 0.3],
-      displayValue: stats.todayRevenue * 0.3,
-    },
-  ];
-  const hasWaterfallData = stats.todayRevenue > 0;
-
-  const kpis = [
-    {
-      label: "Doanh thu hôm nay",
-      value:
-        stats.todayRevenue >= 1000000
-          ? `${(stats.todayRevenue / 1000000).toFixed(1)}tr`
-          : `${stats.todayRevenue.toLocaleString("vi-VN")}₫`,
-      color: "text-primary",
-    },
-    {
-      label: "Đơn hàng mới",
-      value: stats.newOrders.toLocaleString("vi-VN"),
-      color: "text-success",
-    },
-    {
-      label: "Khách hàng mới",
-      value: stats.newCustomers.toLocaleString("vi-VN"),
-      color: "text-warning",
-    },
-    {
-      label: "Sản phẩm tồn kho",
-      value: stats.stockProducts.toLocaleString("vi-VN"),
-      color: "text-foreground",
-    },
-  ];
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground animate-pulse">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
-        <div>Đang nạp hệ thống phân tích đa tầng ShopTech...</div>
+      <div className="flex flex-col items-center justify-center py-20 text-sm text-gray-500 animate-pulse">
+        <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <div>Đang nạp dữ liệu thống kê chi tiết...</div>
       </div>
     );
   }
 
+  const exportToPDF = async () => {
+    const element = document.getElementById("stats-dashboard");
+    if (!element) return;
+
+    try {
+      setIsExportingPDF(true);
+      // Đợi UI render xong các state đang loading
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // 1. Chụp ảnh khu vực thống kê (Bao cân mọi loại màu oklch, hsl)
+      const dataUrl = await toPng(element, {
+        quality: 1,
+        backgroundColor: "#ffffff", // Ép nền trắng để không bị lỗi nền trong suốt
+        pixelRatio: 2, // Tăng độ nét gấp đôi
+      });
+
+      // 2. Khởi tạo trang PDF ngang (landscape), khổ A4
+      const pdf = new jsPDF("l", "mm", "a4");
+
+      // 3. Tính toán tỷ lệ ảnh để fit vừa trang PDF
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (element.offsetHeight * pdfWidth) / element.offsetWidth;
+
+      // 4. Dán ảnh vào PDF và tải xuống
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`thong_ke_shoptech_${selectedMonth}_${selectedYear}.pdf`);
+    } catch (err) {
+      console.error("Lỗi xuất PDF:", err);
+      toast.error("Có lỗi xảy ra khi xuất PDF. Vui lòng thử lại!");
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+  const exportToWord = async () => {
+    try {
+      setIsExportingWord(true);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const revenueFormatted =
+        stats.totalRevenue >= 1000000
+          ? `${(stats.totalRevenue / 1000000).toFixed(1)} triệu VND`
+          : `${stats.totalRevenue.toLocaleString("vi-VN")} VND`;
+
+      const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Báo Cáo Thống Kê</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid black; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          h1, h2, h3 { color: #333; }
+        </style>
+      </head>
+      <body>
+        <h1 style="text-align:center; color: #d30000;">BÁO CÁO THỐNG KÊ SHOPTECH</h1>
+        <h3 style="text-align:center;">Tháng ${selectedMonth} - Năm ${selectedYear}</h3>
+        
+        <h2>1. Tổng Quan</h2>
+        <table>
+          <tr><th>Chỉ tiêu</th><th>Kết quả</th></tr>
+          <tr><td>Tổng Doanh Thu</td><td>${revenueFormatted}</td></tr>
+          <tr><td>Tổng Đơn Hàng</td><td>${stats.totalOrders.toLocaleString("vi-VN")} đơn</td></tr>
+          <tr><td>Tổng Người Dùng</td><td>${stats.totalUsers.toLocaleString("vi-VN")} khách hàng</td></tr>
+          <tr><td>Sản Phẩm Đang Bán</td><td>${stats.totalProducts.toLocaleString("vi-VN")} sản phẩm</td></tr>
+        </table>
+        
+        <h2>2. Top Sản Phẩm Bán Chạy (Tháng ${selectedMonth})</h2>
+        <table>
+          <tr><th>STT</th><th>Tên Sản Phẩm</th><th>Đã Bán</th></tr>
+          ${pieChartData
+            .map(
+              (item: any, index: number) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${item.name}</td>
+              <td>${item.isFallback ? 0 : item.value}</td>
+            </tr>
+          `,
+            )
+            .join("")}
+        </table>
+        
+        <p style="text-align:right; margin-top:50px;">
+          <em>Ngày xuất báo cáo: ${new Date().toLocaleDateString("vi-VN")}</em>
+        </p>
+      </body>
+      </html>
+    `;
+
+      const blob = new Blob(["\ufeff", htmlContent], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `bao_cao_shoptech_${selectedMonth}_${selectedYear}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Word:", err);
+    } finally {
+      setIsExportingWord(false);
+    }
+  };
+
   return (
-    <div className="p-1 text-card-foreground">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <h2 className="text-xl font-bold">Tổng quan hệ thống</h2>
-        <div className="flex items-center gap-2">
+    <div className="p-1 text-slate-800" id="stats-dashboard">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <h2 className="text-xl font-bold">Thống kê chi tiết</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={exportToWord}
+            disabled={isExportingWord || isExportingPDF}
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isExportingWord ? (
+              <div className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            {isExportingWord ? "Đang xuất..." : "Xuất Word"}
+          </button>
+
+          {/* 🔴 SỬA CLASSS BG-DESTRUCTIVE TRONG NÚT PDF */}
+          <button
+            onClick={exportToPDF}
+            disabled={isExportingWord || isExportingPDF}
+            className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isExportingPDF ? (
+              <div className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isExportingPDF ? "Đang xuất..." : "Xuất PDF"}
+          </button>
+
+          {/* 🔴 SỬA CLASS TRONG SELECT */}
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="border border-border rounded-lg px-3 py-1.5 text-sm bg-background font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-red-600 cursor-pointer"
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -331,9 +428,9 @@ function AdminDashboard() {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="border border-border rounded-lg px-3 py-1.5 text-sm bg-background font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-red-600 cursor-pointer"
           >
-            {[2024, 2025, 2026, 2027].map((y) => (
+            {[selectedYear - 1, selectedYear, selectedYear + 1].map((y) => (
               <option key={y} value={y}>
                 Năm {y}
               </option>
@@ -342,232 +439,181 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* KPIs Số liệu */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border p-4 bg-background shadow-sm">
-            <div className="text-xs text-muted-foreground">{k.label}</div>
-            <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* 🔴 THAY TOÀN BỘ TEXT-MUTED-FOREGROUND / BG-CARD / BORDER-BORDER Ở CÁC THẺ CARD */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium text-gray-500">Tổng doanh thu</div>
+            <TrendingUp className="h-4 w-4 text-red-600" />
           </div>
-        ))}
+          <div className="text-2xl font-bold text-red-600">
+            {stats.totalRevenue >= 1000000
+              ? `${(stats.totalRevenue / 1000000).toFixed(1)}tr`
+              : `${stats.totalRevenue.toLocaleString("vi-VN")}₫`}
+          </div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium text-gray-500">Tổng đơn hàng</div>
+            <Activity className="h-4 w-4 text-green-500" />
+          </div>
+          <div className="text-2xl font-bold">{stats.totalOrders.toLocaleString("vi-VN")}</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium text-gray-500">Người dùng</div>
+            <PieIcon className="h-4 w-4 text-yellow-500" />
+          </div>
+          <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString("vi-VN")}</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium text-gray-500">Sản phẩm</div>
+            <BarChart3 className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="text-2xl font-bold">{stats.totalProducts.toLocaleString("vi-VN")}</div>
+        </div>
       </div>
 
-      {/* LƯỚI KHÔNG GIAN BIỂU ĐỒ ĐA DẠNG */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. COMBO CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <h3 className="font-bold text-sm">1. Combo Chart (Phối hợp đa tầng)</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h3 className="font-bold">Doanh thu & Đơn hàng (Tháng {selectedMonth}/{selectedYear})</h3>
+            <p className="text-xs text-gray-500">
+              Xu hướng doanh thu và số lượng đơn hàng trong tháng
+            </p>
           </div>
-          <div className="h-[240px] text-xs">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timeSeriesChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip
-                  formatter={(value: any) =>
-                    typeof value === "number" ? value.toLocaleString("vi-VN") : value
+              <BarChart
+                data={timeSeriesChartData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  dy={10}
+                />
+                <YAxis
+                  yAxisId="left"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tickFormatter={(value) =>
+                    value >= 1000000 ? `${(value / 1000000).toFixed(0)}tr` : value
                   }
                 />
-                <Legend />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#64748b" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  }}
+                  itemStyle={{ color: "#0f172a", fontSize: "14px", fontWeight: 500 }}
+                  labelStyle={{ color: "#64748b", fontSize: "12px", marginBottom: "4px" }}
+                  formatter={(value: number, name: string) => [
+                    name === "Doanh thu" ? `${value.toLocaleString("vi-VN")}₫` : value,
+                    name,
+                  ]}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
                 <Bar
+                  yAxisId="left"
                   dataKey="Doanh thu"
-                  fill="hsl(var(--primary))"
-                  barSize={20}
+                  fill="#cb1c22"
                   radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
                 />
-                <Line
-                  type="monotone"
+                <Bar
+                  yAxisId="right"
                   dataKey="Đơn hàng"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
+                  fill="#f59e0b"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
                 />
-              </ComposedChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* 2. COLUMN CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Columns className="h-4 w-4 text-blue-500" />
-            <h3 className="font-bold text-sm">2. Column Chart (Doanh thu cột dọc)</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h3 className="font-bold">Top sản phẩm bán chạy</h3>
+            <p className="text-xs text-gray-500">
+              Tháng {selectedMonth}/{selectedYear}
+            </p>
           </div>
-          <div className="h-[240px] text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timeSeriesChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip formatter={(value: any) => `${value.toLocaleString("vi-VN")}₫`} />
-                <Bar dataKey="Doanh thu" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* 3. BAR CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="h-4 w-4 text-emerald-500" />
-            <h3 className="font-bold text-sm">3. Bar Chart (Thanh ngang sản lượng)</h3>
-          </div>
-          <div className="h-[240px] text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart layout="vertical" data={timeSeriesChartData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  horizontal={false}
-                  stroke="hsl(var(--border))"
-                />
-                <XAxis type="number" tickLine={false} axisLine={false} />
-                <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Bar dataKey="Đơn hàng" fill="#10b981" barSize={15} radius={[0, 4, 4, 0]} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* 4. LINE CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="h-4 w-4 text-amber-500" />
-            <h3 className="font-bold text-sm">4. Line Chart (Biến động đơn hàng)</h3>
-          </div>
-          <div className="h-[240px] text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timeSeriesChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="Đơn hàng"
-                  stroke="#f59e0b"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* 5. PIE CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <PieIcon className="h-4 w-4 text-purple-500" />
-            <h3 className="font-bold text-sm">5. Pie Chart (Tỷ trọng sản phẩm bán chạy)</h3>
-          </div>
-          <div className="h-[240px] flex items-center justify-center text-xs relative">
+          <div className="h-[250px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
-                  outerRadius={75}
-                  paddingAngle={4}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
                   dataKey="value"
-                  nameKey="name"
+                  stroke="none"
                 >
                   {pieChartData.map((entry: any, index: number) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.isFallback ? "gray" : PALETTE[index % PALETTE.length]}
+                      fill={entry.isFallback ? "#f1f5f9" : PALETTE[index % PALETTE.length]}
                     />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) =>
-                    typeof value === "number" ? value.toLocaleString("vi-VN") : value
+                  formatter={(value: number, name: string, props: any) =>
+                    props.payload.isFallback
+                      ? ["Chưa có dữ liệu", "Thông báo"]
+                      : [`${value} sản phẩm`, "Đã bán"]
                   }
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            {!hasPieData && (
-              <div className="absolute text-[11px] text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                0% Thực tế
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
+              <div className="text-sm text-gray-500">Top</div>
+              <div className="text-xl font-bold">{hasPieData ? topProducts.length : 0}</div>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2 max-h-[150px] overflow-y-auto pr-1">
+            {pieChartData.map((item: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 truncate pr-2">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: item.isFallback ? "#f1f5f9" : PALETTE[idx % PALETTE.length],
+                    }}
+                  ></div>
+                  <span className="truncate" title={item.name}>
+                    {item.name}
+                  </span>
+                </div>
+                <span className="font-medium shrink-0">{item.isFallback ? "-" : item.value}</span>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* 6. FUNNEL CHART */}
-        <div className="rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="h-4 w-4 text-pink-500" />
-            <h3 className="font-bold text-sm">6. Funnel Chart (Hiệu suất phễu bán hàng)</h3>
-          </div>
-          <div className="h-[240px] text-xs flex items-center justify-center relative">
-            {hasFunnelData ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsFunnelChart>
-                  <Tooltip />
-                  <Funnel dataKey="value" data={funnelChartData} isAnimationActive>
-                    {funnelChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Funnel>
-                </RechartsFunnelChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-muted-foreground text-center">
-                0% - Hệ thống chưa có lượt tương tác
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 7. WATERFALL CHART */}
-        <div className="lg:col-span-2 rounded-xl border p-5 bg-background shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-cyan-500 rotate-90" />
-            <h3 className="font-bold text-sm">
-              7. Waterfall Chart (Dòng thác phân tích dòng tiền phát sinh)
-            </h3>
-          </div>
-          <div className="h-[240px] text-xs">
-            {hasWaterfallData ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={waterfallChartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                  <Tooltip
-                    formatter={(value: any, name: any, props: any) => [
-                      `${props.payload.displayValue.toLocaleString("vi-VN")}₫`,
-                      "Biến động",
-                    ]}
-                  />
-                  <Bar dataKey="uv" radius={[4, 4, 4, 4]}>
-                    {waterfallChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.displayValue < 0 ? "#ef4444" : "#10b981"}
-                      />
-                    ))}
-                  </Bar>
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                Mức 0% - Chưa phát sinh dòng tiền doanh thu hôm nay để tính toán phân rã dòng thác
-              </div>
-            )}
+            ))}
           </div>
         </div>
       </div>
     </div>
   );
 }
+

@@ -22,7 +22,7 @@ import { toast } from "sonner";
 
 
 const menu = [
-  { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, exact: true },
+  { to: "/admin", label: "Tổng quan & Thống kê", icon: LayoutDashboard, exact: true },
   { to: "/admin/stores", label: "Cửa hàng toàn quốc", icon: Store },
   { to: "/admin/categories", label: "Danh mục", icon: Grid },
   { to: "/admin/banners", label: "Banner", icon: Image },
@@ -35,7 +35,6 @@ const menu = [
   { to: "/admin/vouchers", label: "Voucher", icon: Tag },
   { to: "/admin/flash-sales", label: "Flash Sales", icon: Zap },
   { to: "/admin/news", label: "Tin tức", icon: Newspaper },
-  { to: "/admin/stats", label: "Thống kê", icon: BarChart3 },
   { to: "/admin/chatbot-history", label: "Lịch sử Chatbot", icon: Bot },
 ];
 
