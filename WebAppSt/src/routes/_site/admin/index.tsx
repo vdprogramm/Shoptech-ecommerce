@@ -168,7 +168,7 @@ function AdminStatsPage() {
 
       let pList: any[] = [];
 
-      const productMap: Record<string, { name: string; sold: number }> = {};
+      const productMap: Record<string, { _id: string; name: string; sold: number }> = {};
       if (ordersArray && ordersArray.length > 0) {
         ordersArray.forEach((o: any) => {
           if (!o.createdAt) return;
