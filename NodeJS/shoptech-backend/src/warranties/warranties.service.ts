@@ -73,6 +73,15 @@ export class WarrantiesService {
     }
 
     async getMerchantWarranties(storeId: string) {
-      return await this.warrantyModel.find({ store: storeId }).populate('product user order').exec();
+      const productModel = this.warrantyModel.db.model('Product');
+      const storeProducts = await productModel.find({ store: storeId }).select('_id').exec();
+      const productIds = storeProducts.map(p => p._id);
+
+      return await this.warrantyModel.find({
+        $or: [
+          { store: storeId },
+          { product: { $in: productIds } }
+        ]
+      }).populate('product user order').exec();
     }
 }
