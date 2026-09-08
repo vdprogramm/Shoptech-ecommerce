@@ -166,58 +166,48 @@ function AdminStatsPage() {
       
       let rList = hasCurrentMonthData || hasUserData ? dailyData : [];
 
-      let pList = topProductsRes?.data || topProductsRes;
-      if (pList && !Array.isArray(pList))
-        pList =
-          pList.list ||
-          pList.data ||
-          pList.items ||
-          pList.products ||
-          Object.values(pList).find(Array.isArray) ||
-          [];
+      let pList: any[] = [];
 
-      if (!pList || pList.length === 0) {
-        const productMap: Record<string, { name: string; sold: number }> = {};
-        if (ordersArray && ordersArray.length > 0) {
-          ordersArray.forEach((o: any) => {
-            if (!o.createdAt) return;
-            const date = new Date(o.createdAt);
-            if (date.getFullYear() === selectedYear && date.getMonth() + 1 === selectedMonth) {
-              const status = o.subOrders?.[0]?.status || o.status;
-              if (status !== "Cancelled") {
-                const subs = o.subOrders && o.subOrders.length > 0 ? o.subOrders : [o];
-                subs.forEach((sub: any) => {
-                  const items = sub.items || o.items || [];
-                  items.forEach((item: any) => {
-                    const pId =
-                      item.productId ||
-                      item.product?._id ||
-                      (typeof item.product === "string" ? item.product : null) ||
-                      item._id;
-                    let realName = item.name || item.product?.name || item.productName;
+      const productMap: Record<string, { name: string; sold: number }> = {};
+      if (ordersArray && ordersArray.length > 0) {
+        ordersArray.forEach((o: any) => {
+          if (!o.createdAt) return;
+          const date = new Date(o.createdAt);
+          if (date.getFullYear() === selectedYear && date.getMonth() + 1 === selectedMonth) {
+            const status = o.subOrders?.[0]?.status || o.status;
+            if (status !== "Cancelled") {
+              const subs = o.subOrders && o.subOrders.length > 0 ? o.subOrders : [o];
+              subs.forEach((sub: any) => {
+                const items = sub.items || o.items || [];
+                items.forEach((item: any) => {
+                  const pId =
+                    item.productId ||
+                    item.product?._id ||
+                    (typeof item.product === "string" ? item.product : null) ||
+                    item._id;
+                  let realName = item.name || item.product?.name || item.productName;
 
-                    if (!realName && pId && productsArray.length > 0) {
-                      const foundProduct = productsArray.find((p: any) => p._id === pId);
-                      if (foundProduct) {
-                        realName = foundProduct.name;
-                      }
+                  if (!realName && pId && productsArray.length > 0) {
+                    const foundProduct = productsArray.find((p: any) => p._id === pId);
+                    if (foundProduct) {
+                      realName = foundProduct.name;
                     }
+                  }
 
-                    const name = realName || `Sản phẩm ${String(pId).slice(-4)}`;
-                    const qty = Number(item.quantity || item.qty || 1);
+                  const name = realName || `Sản phẩm ${String(pId).slice(-4)}`;
+                  const qty = Number(item.quantity || item.qty || 1);
 
-                    if (!productMap[pId]) productMap[pId] = { name, sold: 0 };
-                    productMap[pId].sold += qty;
-                  });
+                  if (!productMap[pId]) productMap[pId] = { name, sold: 0 };
+                  productMap[pId].sold += qty;
                 });
-              }
+              });
             }
-          });
-        }
-        pList = Object.values(productMap)
-          .sort((a, b) => b.sold - a.sold)
-          .slice(0, 5);
+          }
+        });
       }
+      pList = Object.values(productMap)
+        .sort((a, b) => b.sold - a.sold)
+        .slice(0, 5);
 
       setRevenueData(Array.isArray(rList) ? rList : []);
       const rawPList = Array.isArray(pList) ? pList : [];
