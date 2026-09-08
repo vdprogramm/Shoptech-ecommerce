@@ -29,7 +29,6 @@ const menu = [
   { to: "/admin/brands", label: "Thương hiệu", icon: Tag },
   { to: "/admin/products", label: "Sản phẩm", icon: Package },
   { to: "/admin/orders", label: "Đơn hàng", icon: ShoppingBag },
-  { to: "/admin/warranties", label: "Bảo hành", icon: ShieldCheck },
   { to: "/admin/users", label: "Người dùng", icon: Users },
   { to: "/admin/shippers", label: "Người giao hàng", icon: Truck },
   { to: "/admin/reviews", label: "Đánh giá", icon: MessageSquare },
