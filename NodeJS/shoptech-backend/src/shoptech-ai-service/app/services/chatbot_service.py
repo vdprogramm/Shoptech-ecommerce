@@ -555,7 +555,7 @@ class ChatbotService:
                 if line.startswith("Giá:") or line.startswith("Giá Gốc:"): price = line
                 if line.startswith("Danh mục:"): cat_brand = line
             
-            if name and not name.startswith('![') and not name.startswith('['):
+            if name and not name.startswith('!['):
                 is_normal_product = "🔥" not in item and "[FLASH SALE]" not in item and "[VOUCHER]" not in item and "[BÁN CHẠY NHẤT]" not in item and "[HỦY NHIỀU NHẤT]" not in item
                 
                 # NẾU KHÁCH HỎI FLASH SALE -> ẨN LUÔN CÁC SẢN PHẨM BÌNH THƯỜNG TRONG MẮT AI
