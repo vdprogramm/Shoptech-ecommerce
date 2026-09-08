@@ -445,6 +445,7 @@ export class OrdersService {
           user: order.user,
           order: order._id,
           product: item.product,
+          store: subOrder.store,
           startDate: startDate,
           endDate: endDate,
         });
@@ -554,6 +555,7 @@ export class OrdersService {
           user: order.user,
           order: order._id,
           product: item.product,
+          store: currentSubOrder.store,
           startDate: startDate,
           endDate: endDate,
         });

@@ -53,7 +53,7 @@ export class WarrantiesController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN, Role.STORE_OWNER)
     @Get('merchant')
-    async getMerchantWarranties() {
-      return await this.warrantiesService.getMerchantWarranties();
+    async getMerchantWarranties(@Req() req) {
+      return await this.warrantiesService.getMerchantWarranties(req.user.storeId);
     }
 }

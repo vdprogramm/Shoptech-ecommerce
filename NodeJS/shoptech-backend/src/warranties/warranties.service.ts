@@ -19,10 +19,17 @@ export class WarrantiesService {
     // Tính toán ngày kết thúc dựa trên durationMonths
     endDate.setMonth(endDate.getMonth() + createDto.durationMonths);
 
+    const productModel = this.warrantyModel.db.model('Product');
+    const productInfo = await productModel.findById(createDto.productId);
+    if (!productInfo) {
+      throw new NotFoundException('Sản phẩm không tồn tại');
+    }
+
     return await this.warrantyModel.create({
       user: createDto.userId,
       order: createDto.orderId,
       product: createDto.productId,
+      store: productInfo.store,
       startDate: startDate,
       endDate: endDate,
     });
@@ -65,9 +72,7 @@ export class WarrantiesService {
       return await this.warrantyModel.find().populate('product user order').exec();
     }
 
-    // 6. Lấy bảo hành cho Merchant (Endpoint: GET /warranties/merchant)
-    // Lưu ý: Nếu Merchant cần lọc, bạn có thể truyền storeId vào đây sau này
-    async getMerchantWarranties() {
-      return await this.warrantyModel.find().populate('product user order').exec();
+    async getMerchantWarranties(storeId: string) {
+      return await this.warrantyModel.find({ store: storeId }).populate('product user order').exec();
     }
 }

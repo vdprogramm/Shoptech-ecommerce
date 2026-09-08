@@ -12,6 +12,9 @@ export class Warranty extends Document {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true })
   product: mongoose.Types.ObjectId;
 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true })
+  store: mongoose.Types.ObjectId;
+
   @Prop({ required: true })
   startDate: Date; // Ngày bắt đầu bảo hành (ngày giao hàng)
 
