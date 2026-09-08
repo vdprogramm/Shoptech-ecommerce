@@ -375,8 +375,10 @@ class ChatbotService:
                         
                         summary_status = "Đang xử lý"
                         if "Cancelled" in all_statuses: summary_status = "Đã hủy"
-                        elif "Shipped" in all_statuses: summary_status = "Đang giao hàng"
                         elif "Delivered" in all_statuses: summary_status = "Đã giao thành công"
+                        elif "Shipped" in all_statuses: summary_status = "Đang vận chuyển"
+                        elif "Processing" in all_statuses: summary_status = "Đang chuẩn bị hàng"
+                        elif "Pending" in all_statuses: summary_status = "Chờ xác nhận"
                         
                         items_joined = ", ".join(items_str)
                         content = f"**[ĐƠN HÀNG] {code}**\n\nTrạng thái: **{summary_status}** | Thanh toán: {payment_status} | Tổng tiền: **{format_currency(total)}**\n\nSản phẩm: {items_joined}"
@@ -624,7 +626,8 @@ class ChatbotService:
             behavior_prompt = (
                 "THÔNG TIN HÀNH VI CỦA KHÁCH HÀNG (RẤT QUAN TRỌNG):\n"
                 f"{user_behavior_context}\n"
-                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các thông tin trên (sản phẩm yêu thích, giỏ hàng, mua hàng, đã hủy, đã xem, tìm kiếm) để đưa ra gợi ý phù hợp. Nếu khách nhắc đến sản phẩm yêu thích, hãy tư vấn các sản phẩm trong danh sách Wishlist của họ. Nếu họ vừa hủy đơn, bạn có thể khéo léo hỏi lý do hoặc gợi ý sản phẩm thay thế tương tự. Ví dụ: 'Chào bạn, Shop thấy bạn vừa xem [Tên SP]...'\n\n"
+                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các thông tin trên (sản phẩm yêu thích, giỏ hàng, mua hàng, đã hủy, đã xem, tìm kiếm) để đưa ra gợi ý phù hợp. Nếu khách nhắc đến sản phẩm yêu thích, hãy tư vấn các sản phẩm trong danh sách Wishlist của họ. Nếu họ vừa hủy đơn, bạn có thể khéo léo hỏi lý do hoặc gợi ý sản phẩm thay thế tương tự.\n"
+                "-> QUAN TRỌNG: Nếu khách HỎI CỤ THỂ về đơn hàng (ví dụ: 'đơn hàng mới nhất', 'đơn của tôi'), bạn PHẢI ưu tiên trả lời đúng trọng tâm câu hỏi của khách trước (đọc kỹ thông tin đơn hàng mới nhất), KHÔNG ĐƯỢC tự ý bẻ lái sang hỏi lý do hủy đơn nếu khách không hỏi.\n\n"
             )
 
         system_instruction = (
