@@ -171,6 +171,32 @@ class ChatbotService:
         user_behavior_context = ""
         user_name = "Khách hàng"
         
+        # --- PRELOAD ACTIVE FLASH SALES ---
+        flash_sale_map = {}
+        try:
+            from datetime import datetime
+            now = datetime.utcnow()
+            pipeline = [
+                {"$match": {"isActive": True, "startTime": {"$lte": now}, "endTime": {"$gte": now}}},
+                {"$unwind": "$items"},
+                {"$lookup": {
+                    "from": "productvariants",
+                    "localField": "items.variant",
+                    "foreignField": "_id",
+                    "as": "variantInfo"
+                }},
+                {"$unwind": {"path": "$variantInfo", "preserveNullAndEmptyArrays": True}}
+            ]
+            fs_items = list(self.db.flashsales.aggregate(pipeline))
+            for item in fs_items:
+                var_info = item.get('variantInfo', {})
+                prod_id = var_info.get('product')
+                sale_price = item.get('items', {}).get('salePrice', 0)
+                if prod_id:
+                    flash_sale_map[str(prod_id)] = sale_price
+        except Exception as e:
+            print("Lỗi preload flash sale:", e)
+
         # --- RECOMMENDATION SYSTEM: LẤY HÀNH VI NGƯỜI DÙNG (GIỎ HÀNG & LỊCH SỬ MUA HÀNG) ---
         if user_id:
             try:
@@ -216,6 +242,49 @@ class ChatbotService:
                         user_behavior_context += f"- Gần đây khách đã mua: {order_str}.\n"
             except Exception as e:
                 print("Lỗi hệ thống đề xuất:", e)
+
+        # --- TÌM KIẾM ĐƠN HÀNG VÀ THỐNG KÊ (ORDER STATS) ---
+        order_stats_keywords = ['hủy nhiều nhất', 'mua nhiều nhất', 'bán chạy nhất', 'thống kê đơn hàng', 'nhiều người mua', 'sản phẩm hot']
+        is_asking_order_stats = any(kw in current_message.lower() for kw in order_stats_keywords)
+        if is_asking_order_stats:
+            try:
+                # Top cancelled products
+                cancelled_pipeline = [
+                    {"$unwind": "$subOrders"},
+                    {"$unwind": "$subOrders.items"},
+                    {"$match": {"subOrders.status": "Cancelled"}},
+                    {"$group": {"_id": "$subOrders.items.product", "count": {"$sum": "$subOrders.items.quantity"}}},
+                    {"$sort": {"count": -1}},
+                    {"$limit": 3}
+                ]
+                top_cancelled = list(self.db.orders.aggregate(cancelled_pipeline))
+                
+                # Top completed products
+                completed_pipeline = [
+                    {"$unwind": "$subOrders"},
+                    {"$unwind": "$subOrders.items"},
+                    {"$match": {"subOrders.status": "Delivered"}},
+                    {"$group": {"_id": "$subOrders.items.product", "count": {"$sum": "$subOrders.items.quantity"}}},
+                    {"$sort": {"count": -1}},
+                    {"$limit": 3}
+                ]
+                top_completed = list(self.db.orders.aggregate(completed_pipeline))
+                
+                db_results.append("THỐNG KÊ SẢN PHẨM MUA NHIỀU NHẤT VÀ HỦY NHIỀU NHẤT HỆ THỐNG:")
+                if top_completed:
+                    db_results.append("- Top Sản phẩm BÁN CHẠY NHẤT (Đã giao thành công):")
+                    for stat in top_completed:
+                        p_doc = self.db.products.find_one({"_id": stat['_id']})
+                        if p_doc:
+                            db_results.append(f"  + **{p_doc.get('name', 'Sản phẩm')}** (Đã bán: {stat['count']} cái)")
+                if top_cancelled:
+                    db_results.append("- Top Sản phẩm BỊ HỦY NHIỀU NHẤT:")
+                    for stat in top_cancelled:
+                        p_doc = self.db.products.find_one({"_id": stat['_id']})
+                        if p_doc:
+                            db_results.append(f"  + **{p_doc.get('name', 'Sản phẩm')}** (Đã hủy: {stat['count']} cái)")
+            except Exception as e:
+                print("Lỗi khi fetch order stats:", e)
 
         # --- TÌM KIẾM ĐƠN HÀNG NẾU NGƯỜI DÙNG HỎI ---
         order_keywords = ['đơn hàng', 'đơn mua', 'theo dõi đơn', 'tình trạng đơn', 'đơn của tôi', 'vận chuyển', 'đã giao', 'chưa giao', 'đang giao']
@@ -439,9 +508,14 @@ class ChatbotService:
                         image_url = raw_image or "null"
                     
                     img_markdown = f"![Ảnh sản phẩm]({image_url})\n\n" if image_url != "null" and image_url.startswith("http") else ""
+                    
+                    fs_tag = ""
+                    if str(p.get('_id')) in flash_sale_map:
+                        fs_tag = f"🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {flash_sale_map[str(p.get('_id'))]} VNĐ (Giá gốc: {price} VNĐ)\n\n"
 
                     content = (
                         f"**{name}**\n\n"
+                        f"{fs_tag}"
                         f"Giá: {price} VNĐ\n\n"
                         f"Mô tả: {desc}\n\n"
                         f"{img_markdown}"
@@ -454,7 +528,12 @@ class ChatbotService:
         # Gộp kết quả Vector và DB Fallback
         combined_context = []
         if search_results:
-            combined_context.extend([f"- {doc.page_content}" for doc in search_results])
+            for doc in search_results:
+                prod_id = doc.metadata.get('productId')
+                content = doc.page_content
+                if prod_id and str(prod_id) in flash_sale_map:
+                    content += f"\n\n🔥 ĐANG CÓ FLASH SALE CHỈ CÒN: {flash_sale_map[str(prod_id)]} VNĐ\n"
+                combined_context.append(f"- {content}")
         if db_results:
             combined_context.extend(db_results)
             
@@ -502,9 +581,10 @@ class ChatbotService:
             "DANH SÁCH DỮ LIỆU TÌM ĐƯỢC (Đã được đánh mã [P1], [P2]...):\n"
             f"---\n{store_context_for_llm}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
-            "1. LỌC DỮ LIỆU CỰC KỲ NGHIÊM NGẶT: Bạn PHẢI kiểm tra Danh mục và Giá của từng mã [P1], [P2]... Khách hỏi danh mục nào (VD: điện thoại) thì CHỈ ĐƯỢC CHỌN đúng danh mục đó (TUYỆT ĐỐI KHÔNG chọn Tai nghe, Chuột, Đồng hồ...). KHÔNG ĐƯỢC cố gắng chọn sai danh mục chỉ để có sản phẩm hiển thị!\n"
-            "2. NẾU KHÔNG CÓ SẢN PHẨM NÀO KHỚP 100% YÊU CẦU: Bạn BẮT BUỘC phải nói 'Dạ hiện tại Shop không có sản phẩm nào phù hợp yêu cầu của bạn ạ.' và KHÔNG CHÈN MÃ NÀO CẢ.\n"
-            "3. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
+            "1. TƯ VẤN LINH HOẠT VÀ CHÍNH XÁC: Khi khách hỏi một sản phẩm chung chung (VD: Laptop), hãy phân tích và tư vấn sản phẩm phù hợp nhất trong danh sách. Hãy cố gắng hết sức để cung cấp thông tin, ĐỪNG vội vàng nói không có sản phẩm.\n"
+            "2. NẾU TÌM ĐƯỢC NHIỀU KẾT QUẢ: Ưu tiên giới thiệu các sản phẩm đang có nhãn 🔥 FLASH SALE (nếu có).\n"
+            "3. CHỈ KHI TUYỆT ĐỐI KHÔNG CÓ BẤT KỲ DỮ LIỆU NÀO LIÊN QUAN: Bạn mới nói 'Dạ hiện tại Shop không có thông tin/sản phẩm nào phù hợp yêu cầu của bạn ạ.'\n"
+            "4. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
             "4. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
             "5. Trả lời ngắn gọn, lịch sự."
         )
