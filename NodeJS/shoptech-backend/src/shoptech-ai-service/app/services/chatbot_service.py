@@ -279,6 +279,19 @@ class ChatbotService:
                         if viewed_products:
                             viewed_str = ", ".join([v for v in viewed_products if v])
                             user_behavior_context += f"- Khách vừa xem các sản phẩm: {viewed_str}.\n"
+                            
+                # 5. Đọc Sản phẩm yêu thích (Wishlist)
+                wishlists = list(self.db.wishlists.find({"user": ObjectId(user_id)}).sort("createdAt", -1).limit(3))
+                if wishlists:
+                    favorite_products = []
+                    for w in wishlists:
+                        try:
+                            p_doc = self.db.products.find_one({"_id": w.get('product')})
+                            if p_doc: favorite_products.append(p_doc.get('name', ''))
+                        except: pass
+                    if favorite_products:
+                        fav_str = ", ".join([v for v in favorite_products if v])
+                        user_behavior_context += f"- Sản phẩm khách hàng ĐANG YÊU THÍCH (Wishlist): {fav_str}.\n"
             except Exception as e:
                 print("Lỗi hệ thống đề xuất:", e)
 
@@ -611,7 +624,7 @@ class ChatbotService:
             behavior_prompt = (
                 "THÔNG TIN HÀNH VI CỦA KHÁCH HÀNG (RẤT QUAN TRỌNG):\n"
                 f"{user_behavior_context}\n"
-                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các thông tin trên (giỏ hàng, mua hàng, đã hủy, đã xem, tìm kiếm) để đưa ra gợi ý phù hợp. Nếu họ vừa hủy đơn, bạn có thể khéo léo hỏi lý do hoặc gợi ý sản phẩm thay thế tương tự. Ví dụ: 'Chào bạn, Shop thấy bạn vừa xem [Tên SP]...'\n\n"
+                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các thông tin trên (sản phẩm yêu thích, giỏ hàng, mua hàng, đã hủy, đã xem, tìm kiếm) để đưa ra gợi ý phù hợp. Nếu khách nhắc đến sản phẩm yêu thích, hãy tư vấn các sản phẩm trong danh sách Wishlist của họ. Nếu họ vừa hủy đơn, bạn có thể khéo léo hỏi lý do hoặc gợi ý sản phẩm thay thế tương tự. Ví dụ: 'Chào bạn, Shop thấy bạn vừa xem [Tên SP]...'\n\n"
             )
 
         system_instruction = (
