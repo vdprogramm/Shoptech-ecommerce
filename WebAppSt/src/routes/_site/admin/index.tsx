@@ -197,7 +197,7 @@ function AdminStatsPage() {
                   const name = realName || `Sản phẩm ${String(pId).slice(-4)}`;
                   const qty = Number(item.quantity || item.qty || 1);
 
-                  if (!productMap[pId]) productMap[pId] = { name, sold: 0 };
+                  if (!productMap[pId]) productMap[pId] = { _id: pId, name, sold: 0 };
                   productMap[pId].sold += qty;
                 });
               });
