@@ -229,13 +229,14 @@ class ChatbotService:
                         cart_str = ", ".join(list(set(cart_products)))
                         user_behavior_context += f"- Khách đang có trong giỏ hàng: {cart_str}.\n"
                 
-                # 2. Đọc Đơn hàng gần nhất không bị hủy (Recent Order)
-                last_order_cursor = self.db.orders.find({"user": ObjectId(user_id)}).sort("createdAt", -1).limit(5)
+                # 2. Đọc Đơn hàng gần đây (bao gồm cả mua thành công và đã hủy)
+                last_order_cursor = self.db.orders.find({"user": ObjectId(user_id)}).sort("createdAt", -1).limit(3)
+                successful_items = []
+                cancelled_items = []
+                
                 for order in last_order_cursor:
-                    order_items = []
                     for so in order.get('subOrders', []):
-                        if so.get('status') == 'Cancelled':
-                            continue
+                        status = so.get('status')
                         for item in so.get('items', []):
                             item_name = item.get('name', '')
                             if not item_name or item_name.lower() == 'sản phẩm':
@@ -243,11 +244,19 @@ class ChatbotService:
                                     p_doc = self.db.products.find_one({"_id": item.get('product')})
                                     if p_doc: item_name = p_doc.get('name', 'Sản phẩm')
                                 except: pass
-                            order_items.append(item_name)
-                    if order_items:
-                        order_str = ", ".join(list(set(order_items)))
-                        user_behavior_context += f"- Gần đây khách đã mua (thành công/đang giao): {order_str}.\n"
-                        break # Chỉ lấy 1 đơn hàng hợp lệ gần nhất
+                                
+                            if status == 'Cancelled':
+                                cancelled_items.append(item_name)
+                            else:
+                                successful_items.append(item_name)
+
+                if successful_items:
+                    order_str = ", ".join(list(set(successful_items[:5])))
+                    user_behavior_context += f"- Gần đây khách đã đặt mua: {order_str}.\n"
+                
+                if cancelled_items:
+                    cancel_str = ", ".join(list(set(cancelled_items[:3])))
+                    user_behavior_context += f"- Gần đây khách đã HỦY đơn hàng chứa các sản phẩm: {cancel_str}.\n"
                         
                 # 3. Đọc Lịch sử tìm kiếm (Search History)
                 if user_doc.get('searchHistory'):
@@ -602,7 +611,7 @@ class ChatbotService:
             behavior_prompt = (
                 "THÔNG TIN HÀNH VI CỦA KHÁCH HÀNG (RẤT QUAN TRỌNG):\n"
                 f"{user_behavior_context}\n"
-                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các sản phẩm trong giỏ hàng, sản phẩm đã xem hoặc từ khóa tìm kiếm gần đây để đưa ra gợi ý phù hợp và khơi gợi nhu cầu (Upsell/Cross-sell). Ví dụ: 'Chào bạn, Shop thấy bạn đang quan tâm [Tên SP]...'\n\n"
+                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các thông tin trên (giỏ hàng, mua hàng, đã hủy, đã xem, tìm kiếm) để đưa ra gợi ý phù hợp. Nếu họ vừa hủy đơn, bạn có thể khéo léo hỏi lý do hoặc gợi ý sản phẩm thay thế tương tự. Ví dụ: 'Chào bạn, Shop thấy bạn vừa xem [Tên SP]...'\n\n"
             )
 
         system_instruction = (
