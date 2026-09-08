@@ -47,6 +47,7 @@ function AdminStatsPage() {
 
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [orderStatusData, setOrderStatusData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -242,6 +243,25 @@ function AdminStatsPage() {
       });
 
       setTopProducts(enrichedPList);
+
+      let statusMap: Record<string, number> = {};
+      if (currentMonthOrders && currentMonthOrders.length > 0) {
+        currentMonthOrders.forEach((o: any) => {
+          const status = o.subOrders?.[0]?.status || o.status || "Khác";
+          let translatedStatus = "Khác";
+          if (status === "Delivered") translatedStatus = "Đã giao";
+          else if (status === "Cancelled") translatedStatus = "Đã hủy";
+          else if (status === "Pending") translatedStatus = "Chờ xử lý";
+          else if (status === "Processing") translatedStatus = "Đang chuẩn bị";
+          else if (status === "Shipped" || status === "Shipping") translatedStatus = "Đang giao";
+          else translatedStatus = status;
+          
+          statusMap[translatedStatus] = (statusMap[translatedStatus] || 0) + 1;
+        });
+      }
+      const sData = Object.entries(statusMap).map(([name, value]) => ({ name, value }));
+      setOrderStatusData(sData.length > 0 ? sData : [{ name: "Chưa có dữ liệu", value: 1, isFallback: true }]);
+
     } catch (err) {
       console.error("Lỗi đồng bộ dữ liệu thống kê:", err);
     } finally {
@@ -654,6 +674,44 @@ function AdminStatsPage() {
                 <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
                 <Line type="monotone" dataKey="Khách mới" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h3 className="font-bold">Tỷ lệ trạng thái vận đơn</h3>
+            <p className="text-xs text-gray-500">
+              Tiến độ xử lý các kiện hàng (Tháng {selectedMonth})
+            </p>
+          </div>
+          <div className="h-[300px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={orderStatusData}
+                margin={{ top: 0, right: 30, left: 20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
+                <Tooltip
+                  formatter={(value: number, name: string, props: any) =>
+                    props.payload.isFallback
+                      ? ["Chưa có dữ liệu", "Thông báo"]
+                      : [`${value} kiện`, "Số lượng"]
+                  }
+                  contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                  cursor={{ fill: "transparent" }}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                  {orderStatusData.map((entry: any, index: number) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.isFallback ? "#f1f5f9" : ["#10b981", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#64748b"][index % 6]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
