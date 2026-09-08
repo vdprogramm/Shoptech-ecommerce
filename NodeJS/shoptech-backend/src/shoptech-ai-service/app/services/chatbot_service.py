@@ -556,7 +556,13 @@ class ChatbotService:
                 if line.startswith("Danh mục:"): cat_brand = line
             
             if name and not name.startswith('![') and not name.startswith('['):
-                if "🔥" not in item and "[FLASH SALE]" not in item and "[VOUCHER]" not in item and "[BÁN CHẠY NHẤT]" not in item and "[HỦY NHIỀU NHẤT]" not in item:
+                is_normal_product = "🔥" not in item and "[FLASH SALE]" not in item and "[VOUCHER]" not in item and "[BÁN CHẠY NHẤT]" not in item and "[HỦY NHIỀU NHẤT]" not in item
+                
+                # NẾU KHÁCH HỎI FLASH SALE -> ẨN LUÔN CÁC SẢN PHẨM BÌNH THƯỜNG TRONG MẮT AI
+                if is_asking_flash_sale and is_normal_product:
+                    continue
+                    
+                if is_normal_product:
                     llm_context_list.append(f"{pid} - [SẢN PHẨM NGUYÊN GIÁ] {name} ({price}, {cat_brand})")
                 else:
                     llm_context_list.append(f"{pid} - {name} ({price}, {cat_brand})")
@@ -583,7 +589,7 @@ class ChatbotService:
             f"---\n{store_context_for_llm}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
             "1. TƯ VẤN LINH HOẠT: Khi khách hỏi một sản phẩm chung chung (VD: Laptop), hãy phân tích và tư vấn sản phẩm phù hợp nhất trong danh sách.\n"
-            "2. YÊU CẦU VỀ FLASH SALE: Nếu khách hàng đang hỏi về Flash Sale, khuyến mãi hoặc giảm giá, bạn CHỈ ĐƯỢC PHÉP giới thiệu các sản phẩm có nhãn [FLASH SALE] hoặc 🔥 ĐANG CÓ FLASH SALE. TUYỆT ĐỐI KHÔNG giới thiệu các sản phẩm có nhãn [SẢN PHẨM NGUYÊN GIÁ].\n"
+            "2. YÊU CẦU VỀ FLASH SALE: Nếu khách hàng đang hỏi về Flash Sale, khuyến mãi hoặc giảm giá, bạn CHỈ ĐƯỢC PHÉP giới thiệu các sản phẩm có nhãn [FLASH SALE].\n"
             "3. CHỈ KHI TUYỆT ĐỐI KHÔNG CÓ BẤT KỲ DỮ LIỆU NÀO LIÊN QUAN: Bạn mới nói 'Dạ hiện tại Shop không có thông tin/sản phẩm nào phù hợp yêu cầu của bạn ạ.'\n"
             "4. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
             "5. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
