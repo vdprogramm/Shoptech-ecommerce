@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Breadcrumb, PageHeader } from "@/components/site/PageHeader";
 import { ProductCard, type Product } from "@/components/site/ProductCard";
 import { categoryService } from "@/lib/api/api-category";
-import { productService } from "@/lib/api/api-product";
+import { productService, type IBrand } from "@/lib/api/api-product";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_site/category/$slug")({
@@ -24,21 +24,40 @@ function cleanStringForCompare(text: string): string {
     .replace(/[-_\s]/g, "");
 }
 
+const PRICE_RANGES = [
+  { id: "range-1", label: "Dưới 5 triệu", min: 0, max: 5000000 },
+  { id: "range-2", label: "5 - 10 triệu", min: 5000000, max: 10000000 },
+  { id: "range-3", label: "10 - 20 triệu", min: 10000000, max: 20000000 },
+  { id: "range-4", label: "Trên 20 triệu", min: 20000000, max: 9999999999 },
+];
+
 function CategoryPage() {
   const { slug } = Route.useParams();
 
   const [categoryName, setCategoryName] = useState("Danh mục");
   const [products, setProducts] = useState<Product[]>([]);
+  const [allBrands, setAllBrands] = useState<IBrand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // States for filters
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>([]);
 
   // Trạng thái phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Reset trang về 1 khi slug (danh mục) hoặc danh sách sản phẩm thay đổi
+  // Fetch all brands once
+  useEffect(() => {
+    productService.getBrands().then((brands) => setAllBrands(brands)).catch(console.error);
+  }, []);
+
+  // Reset trang và filter khi slug (danh mục) thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [slug, products]);
+    setSelectedBrands([]);
+    setSelectedPriceRanges([]);
+  }, [slug]);
 
   useEffect(() => {
     const fetchCategoryProducts = async () => {
@@ -68,21 +87,19 @@ function CategoryPage() {
         // 2. Lấy toàn bộ danh mục từ NestJS về để so sánh
         const categories = await categoryService.getAllCategories();
 
-        // So sánh chuỗi đã dọn sạch để tìm danh mục trùng khớp bất kể DB lưu kiểu gì
         const targetCategory = categories.find(
           (cat) => cleanStringForCompare(cat.name) === cleanStringForCompare(slug),
         );
 
         if (targetCategory) {
-          // Cập nhật lại tiêu đề đúng theo DB (Ví dụ: "Laptop Gaming")
           setCategoryName(targetCategory.name);
 
           // 3. Gọi API NestJS lọc sản phẩm theo đúng _id MongoDB của danh mục đó
-          const filteredProducts = await productService.getProducts({
+          const fetchedProducts = await productService.getProducts({
             category: targetCategory._id,
             isAvailable: true,
           });
-          setProducts(filteredProducts);
+          setProducts(fetchedProducts);
         } else {
           setCategoryName("Không tìm thấy danh mục");
           setProducts([]);
@@ -98,16 +115,58 @@ function CategoryPage() {
     fetchCategoryProducts();
   }, [slug]);
 
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  // Handle filter logic on frontend side for snappy experience
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      // 1. Filter by brand
+      if (selectedBrands.length > 0) {
+        const productBrandId = typeof p.brand === 'object' ? p.brand?._id : p.brand;
+        if (!productBrandId || !selectedBrands.includes(productBrandId)) {
+          return false;
+        }
+      }
+
+      // 2. Filter by price
+      if (selectedPriceRanges.length > 0) {
+        const matchesPrice = selectedPriceRanges.some((rangeId) => {
+          const range = PRICE_RANGES.find((r) => r.id === rangeId);
+          if (!range) return false;
+          return p.price >= range.min && p.price <= range.max;
+        });
+        if (!matchesPrice) return false;
+      }
+
+      return true;
+    });
+  }, [products, selectedBrands, selectedPriceRanges]);
+
+  // Reset trang về 1 khi danh sách sản phẩm (filtered) thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredProducts.length]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProducts = products.slice(startIndex, startIndex + itemsPerPage);
+  const currentProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  const toggleBrand = (brandId: string) => {
+    setSelectedBrands(prev => 
+      prev.includes(brandId) ? prev.filter(id => id !== brandId) : [...prev, brandId]
+    );
+  };
+
+  const togglePriceRange = (rangeId: string) => {
+    setSelectedPriceRanges(prev => 
+      prev.includes(rangeId) ? prev.filter(id => id !== rangeId) : [...prev, rangeId]
+    );
+  };
 
   return (
     <>
       <Breadcrumb items={[{ label: "Danh mục", to: "/category/$slug" }, { label: categoryName }]} />
       <PageHeader
         title={categoryName}
-        subtitle={isLoading ? "Đang tải..." : `${products.length} sản phẩm`}
+        subtitle={isLoading ? "Đang tải..." : `${filteredProducts.length} sản phẩm`}
       />
 
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 pb-10 text-card-foreground">
@@ -115,23 +174,33 @@ function CategoryPage() {
         <aside className="rounded-xl border bg-card p-4 h-fit space-y-4 text-sm shadow-sm">
           <div>
             <h3 className="font-bold text-foreground mb-2">Khoảng giá</h3>
-            {["Dưới 5 triệu", "5 - 10 triệu", "10 - 20 triệu", "Trên 20 triệu"].map((r) => (
+            {PRICE_RANGES.map((r) => (
               <label
-                key={r}
+                key={r.id}
                 className="flex items-center gap-2 py-1 text-muted-foreground cursor-pointer hover:text-foreground"
               >
-                <input type="checkbox" className="rounded border-gray-300 text-primary" /> {r}
+                <input 
+                  type="checkbox" 
+                  className="rounded border-gray-300 text-primary" 
+                  checked={selectedPriceRanges.includes(r.id)}
+                  onChange={() => togglePriceRange(r.id)}
+                /> {r.label}
               </label>
             ))}
           </div>
           <div>
             <h3 className="font-bold text-foreground mb-2">Thương hiệu</h3>
-            {["Apple", "Samsung", "Xiaomi", "ASUS", "Sony"].map((b) => (
+            {allBrands.map((b) => (
               <label
-                key={b}
+                key={b._id}
                 className="flex items-center gap-2 py-1 text-muted-foreground cursor-pointer hover:text-foreground"
               >
-                <input type="checkbox" className="rounded border-gray-300 text-primary" /> {b}
+                <input 
+                  type="checkbox" 
+                  className="rounded border-gray-300 text-primary" 
+                  checked={selectedBrands.includes(b._id)}
+                  onChange={() => toggleBrand(b._id)}
+                /> {b.name}
               </label>
             ))}
           </div>
@@ -145,9 +214,9 @@ function CategoryPage() {
               Đang bóc tách kho hàng...
             </span>
           </div>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 border rounded-xl text-xs text-muted-foreground bg-card">
-            Chưa có sản phẩm dữ liệu thật nào thuộc danh mục này trên NestJS.
+            Không tìm thấy sản phẩm nào phù hợp với bộ lọc hiện tại.
           </div>
         ) : (
           <div className="space-y-6">
