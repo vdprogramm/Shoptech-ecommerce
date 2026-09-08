@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 22.6.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    },
+    "customer": {
+      "extends": "production",
+      "env": {
+        "APP_VARIANT": "customer"
+      }
+    },
+    "shipper": {
+      "extends": "production",
+      "env": {
+        "APP_VARIANT": "shipper"
+      }
+    },
+    "preview-shipper": {
+      "extends": "preview",
+      "env": {
+        "APP_VARIANT": "shipper"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
