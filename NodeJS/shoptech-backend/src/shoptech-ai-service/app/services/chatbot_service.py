@@ -229,11 +229,13 @@ class ChatbotService:
                         cart_str = ", ".join(list(set(cart_products)))
                         user_behavior_context += f"- Khách đang có trong giỏ hàng: {cart_str}.\n"
                 
-                # 2. Đọc Đơn hàng gần nhất (Recent Order)
-                last_order = self.db.orders.find_one({"user": ObjectId(user_id)}, sort=[("createdAt", -1)])
-                if last_order:
+                # 2. Đọc Đơn hàng gần nhất không bị hủy (Recent Order)
+                last_order_cursor = self.db.orders.find({"user": ObjectId(user_id)}).sort("createdAt", -1).limit(5)
+                for order in last_order_cursor:
                     order_items = []
-                    for so in last_order.get('subOrders', []):
+                    for so in order.get('subOrders', []):
+                        if so.get('status') == 'Cancelled':
+                            continue
                         for item in so.get('items', []):
                             item_name = item.get('name', '')
                             if not item_name or item_name.lower() == 'sản phẩm':
@@ -244,7 +246,8 @@ class ChatbotService:
                             order_items.append(item_name)
                     if order_items:
                         order_str = ", ".join(list(set(order_items)))
-                        user_behavior_context += f"- Gần đây khách đã mua: {order_str}.\n"
+                        user_behavior_context += f"- Gần đây khách đã mua (thành công/đang giao): {order_str}.\n"
+                        break # Chỉ lấy 1 đơn hàng hợp lệ gần nhất
                         
                 # 3. Đọc Lịch sử tìm kiếm (Search History)
                 if user_doc.get('searchHistory'):
@@ -615,7 +618,8 @@ class ChatbotService:
             "3. CHỈ KHI TUYỆT ĐỐI KHÔNG CÓ BẤT KỲ DỮ LIỆU NÀO LIÊN QUAN: Bạn mới nói 'Dạ hiện tại Shop không có thông tin/sản phẩm nào phù hợp yêu cầu của bạn ạ.'\n"
             "4. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
             "5. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
-            "6. Trả lời ngắn gọn, lịch sự."
+            "6. KHI BÁO CÁO ĐƠN HÀNG: Đọc chính xác 'Trạng thái' trong phần THÔNG TIN ĐƠN HÀNG (VD: Đã hủy, Đang xử lý...). Tuyệt đối không bịa ra trạng thái thành công nếu đơn đã bị hủy.\n"
+            "7. Trả lời ngắn gọn, thân thiện."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
