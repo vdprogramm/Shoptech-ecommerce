@@ -64,8 +64,8 @@ class ChatbotService:
             # Kiểm tra xem DB đã có dữ liệu chưa để tránh xóa nhầm khi chạy nhiều worker trên Render
             existing_data = self.vector_db.get()
             if existing_data and len(existing_data.get('ids', [])) > 0:
-                print(f"Vector DB already has {len(existing_data['ids'])} products. Skipping sync to prevent multi-worker conflicts on Render.")
-                return
+                print(f"Vector DB already has {len(existing_data['ids'])} products, but forcing resync for formatting update.")
+                # return (Bỏ qua return để force resync)
         except Exception:
             pass
 
@@ -579,12 +579,12 @@ class ChatbotService:
             "DANH SÁCH DỮ LIỆU TÌM ĐƯỢC (Đã được đánh mã [P1], [P2]...):\n"
             f"---\n{store_context_for_llm}\n---\n\n"
             "QUY TẮC QUAN TRỌNG NHẤT BẠN PHẢI TUÂN THỦ:\n"
-            "1. TƯ VẤN LINH HOẠT VÀ CHÍNH XÁC: Khi khách hỏi một sản phẩm chung chung (VD: Laptop), hãy phân tích và tư vấn sản phẩm phù hợp nhất trong danh sách. Hãy cố gắng hết sức để cung cấp thông tin, ĐỪNG vội vàng nói không có sản phẩm.\n"
-            "2. NẾU TÌM ĐƯỢC NHIỀU KẾT QUẢ: Ưu tiên giới thiệu các sản phẩm đang có nhãn 🔥 FLASH SALE (nếu có).\n"
+            "1. TƯ VẤN LINH HOẠT: Khi khách hỏi một sản phẩm chung chung (VD: Laptop), hãy phân tích và tư vấn sản phẩm phù hợp nhất trong danh sách.\n"
+            "2. YÊU CẦU VỀ FLASH SALE: Nếu khách hàng đang hỏi về Flash Sale, khuyến mãi hoặc giảm giá, bạn CHỈ ĐƯỢC PHÉP giới thiệu các sản phẩm có nhãn [FLASH SALE] hoặc 🔥 ĐANG CÓ FLASH SALE. TUYỆT ĐỐI KHÔNG giới thiệu các sản phẩm bình thường khác nếu khách chỉ hỏi xem đồ giảm giá.\n"
             "3. CHỈ KHI TUYỆT ĐỐI KHÔNG CÓ BẤT KỲ DỮ LIỆU NÀO LIÊN QUAN: Bạn mới nói 'Dạ hiện tại Shop không có thông tin/sản phẩm nào phù hợp yêu cầu của bạn ạ.'\n"
             "4. CÁCH HIỂN THỊ SẢN PHẨM PHÙ HỢP: Sử dụng mã ID (ví dụ [P1], [P2]) để chèn sản phẩm. Ví dụ: 'Shop có [P1] và [P2] phù hợp ạ.'\n"
-            "4. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
-            "5. Trả lời ngắn gọn, lịch sự."
+            "5. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC tự viết tay chi tiết sản phẩm. Chỉ dùng mã [P1], [P2].\n"
+            "6. Trả lời ngắn gọn, lịch sự."
         )
         langchain_messages = [SystemMessage(content=system_instruction)]
 
