@@ -16,6 +16,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
 } from "recharts";
 import {
   BarChart3,
@@ -132,6 +134,7 @@ function AdminStatsPage() {
         name: `${i + 1}/${selectedMonth}`,
         "Doanh thu": 0,
         "Đơn hàng": 0,
+        "Khách mới": 0,
       }));
 
       let hasCurrentMonthData = false;
@@ -148,8 +151,19 @@ function AdminStatsPage() {
           hasCurrentMonthData = true;
         });
       }
+
+      let hasUserData = false;
+      if (currentMonthUsers && currentMonthUsers.length > 0) {
+        currentMonthUsers.forEach((u: any) => {
+          if (!u.createdAt) return;
+          const date = new Date(u.createdAt);
+          const dIndex = date.getDate() - 1;
+          dailyData[dIndex]["Khách mới"] += 1;
+          hasUserData = true;
+        });
+      }
       
-      let rList = hasCurrentMonthData ? dailyData : [];
+      let rList = hasCurrentMonthData || hasUserData ? dailyData : [];
 
       let pList = topProductsRes?.data || topProductsRes;
       if (pList && !Array.isArray(pList))
@@ -245,8 +259,9 @@ function AdminStatsPage() {
         name: item.name || `Ngày ${index + 1}`,
         "Doanh thu": item["Doanh thu"] || item.monthlyRevenue || item.revenue || item.totalRevenue || item.total || 0,
         "Đơn hàng": item["Đơn hàng"] || item.orderCount || item.orders || item.totalOrders || item.count || 0,
+        "Khách mới": item["Khách mới"] || 0,
       }))
-    : [{ name: "Chưa có dữ liệu", "Doanh thu": 0, "Đơn hàng": 0 }];
+    : [{ name: "Chưa có dữ liệu", "Doanh thu": 0, "Đơn hàng": 0, "Khách mới": 0 }];
 
   const hasPieData = topProducts.length > 0;
 
@@ -610,6 +625,36 @@ function AdminStatsPage() {
                 <span className="font-medium shrink-0">{item.isFallback ? "-" : item.value}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h3 className="font-bold">Biến động lượng khách mới</h3>
+            <p className="text-xs text-gray-500">
+              Lượt đăng ký tài khoản mới trong tháng {selectedMonth}/{selectedYear}
+            </p>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={timeSeriesChartData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                  itemStyle={{ color: "#0f172a", fontSize: "14px", fontWeight: 500 }}
+                  labelStyle={{ color: "#64748b", fontSize: "12px", marginBottom: "4px" }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
+                <Line type="monotone" dataKey="Khách mới" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
