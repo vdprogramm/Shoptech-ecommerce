@@ -137,4 +137,28 @@ export class UsersController {
       data: user,
     };
   }
+
+  // --- API MỚI: THEO DÕI HÀNH VI TÌM KIẾM ---
+  @UseGuards(JwtAuthGuard)
+  @Post('me/search-history')
+  async addSearchKeyword(@Req() req: any, @Body('keyword') keyword: string) {
+    if (!keyword) {
+      throw new BadRequestException('Keyword is required');
+    }
+    const userId = req.user.userId || req.user._id;
+    await this.usersService.addSearchKeyword(userId, keyword);
+    return { message: 'Đã lưu lịch sử tìm kiếm' };
+  }
+
+  // --- API MỚI: THEO DÕI SẢN PHẨM ĐÃ XEM ---
+  @UseGuards(JwtAuthGuard)
+  @Post('me/viewed-products')
+  async addViewedProduct(@Req() req: any, @Body('productId') productId: string) {
+    if (!productId) {
+      throw new BadRequestException('Product ID is required');
+    }
+    const userId = req.user.userId || req.user._id;
+    await this.usersService.addViewedProduct(userId, productId);
+    return { message: 'Đã lưu lịch sử xem sản phẩm' };
+  }
 }

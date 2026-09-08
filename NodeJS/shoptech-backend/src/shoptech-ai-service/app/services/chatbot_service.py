@@ -245,6 +245,28 @@ class ChatbotService:
                     if order_items:
                         order_str = ", ".join(list(set(order_items)))
                         user_behavior_context += f"- Gần đây khách đã mua: {order_str}.\n"
+                        
+                # 3. Đọc Lịch sử tìm kiếm (Search History)
+                if user_doc.get('searchHistory'):
+                    search_history = user_doc.get('searchHistory', [])
+                    if search_history:
+                        search_str = ", ".join(search_history[-5:]) # Lấy 5 từ khóa gần nhất
+                        user_behavior_context += f"- Khách vừa tìm kiếm các từ khóa: {search_str}.\n"
+                
+                # 4. Đọc Sản phẩm đã xem (Viewed Products)
+                if user_doc.get('viewedProducts'):
+                    viewed_ids = user_doc.get('viewedProducts', [])
+                    if viewed_ids:
+                        viewed_products = []
+                        # Chỉ lấy 3 sản phẩm xem gần nhất để khỏi dài quá
+                        for vid in viewed_ids[-3:]:
+                            try:
+                                p_doc = self.db.products.find_one({"_id": vid})
+                                if p_doc: viewed_products.append(p_doc.get('name', ''))
+                            except: pass
+                        if viewed_products:
+                            viewed_str = ", ".join([v for v in viewed_products if v])
+                            user_behavior_context += f"- Khách vừa xem các sản phẩm: {viewed_str}.\n"
             except Exception as e:
                 print("Lỗi hệ thống đề xuất:", e)
 
@@ -577,7 +599,7 @@ class ChatbotService:
             behavior_prompt = (
                 "THÔNG TIN HÀNH VI CỦA KHÁCH HÀNG (RẤT QUAN TRỌNG):\n"
                 f"{user_behavior_context}\n"
-                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG nhắc đến các sản phẩm trong giỏ hàng hoặc lịch sử mua hàng để khơi gợi nhu cầu (Upsell/Cross-sell). Ví dụ: 'Chào bạn, Shop thấy bạn đang quan tâm [Tên SP] trong giỏ hàng...'\n\n"
+                "-> HÃY DỰA VÀO ĐÂY ĐỂ ĐỀ XUẤT: Nếu khách chỉ chào hoặc hỏi chung chung, bạn HÃY CHỦ ĐỘNG dựa vào các sản phẩm trong giỏ hàng, sản phẩm đã xem hoặc từ khóa tìm kiếm gần đây để đưa ra gợi ý phù hợp và khơi gợi nhu cầu (Upsell/Cross-sell). Ví dụ: 'Chào bạn, Shop thấy bạn đang quan tâm [Tên SP]...'\n\n"
             )
 
         system_instruction = (

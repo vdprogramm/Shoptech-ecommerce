@@ -251,4 +251,59 @@ export class UsersService implements OnModuleInit {
     }
     return updatedUser;
   }
+
+  // --- HÀM MỚI: CẬP NHẬT LỊCH SỬ TÌM KIẾM ---
+  async addSearchKeyword(userId: string, keyword: string) {
+    // Trim and convert to lowercase to avoid duplicates if needed, but here we just store raw string
+    const keywordClean = keyword.trim();
+    if (!keywordClean) return;
+
+    // We pull the exact keyword if it exists to push it to the end (most recent), 
+    // or just add it. Mongoose doesn't have a simple "move to end" operator,
+    // so we'll do an update pipeline or two operations, or simpler: 
+    // pull first, then push with $slice to limit to 15 items.
+    
+    // Step 1: Remove if exists (to avoid duplicates and move to top later)
+    await this.userModel.findByIdAndUpdate(userId, {
+      $pull: { searchHistory: keywordClean }
+    });
+
+    // Step 2: Push to end and limit to 15 items
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        $push: {
+          searchHistory: {
+            $each: [keywordClean],
+            $slice: -15 // Keep only the last 15 elements
+          }
+        }
+      },
+      { new: true }
+    );
+    return updatedUser;
+  }
+
+  // --- HÀM MỚI: CẬP NHẬT SẢN PHẨM ĐÃ XEM ---
+  async addViewedProduct(userId: string, productId: string) {
+    // Step 1: Remove if exists
+    await this.userModel.findByIdAndUpdate(userId, {
+      $pull: { viewedProducts: productId }
+    });
+
+    // Step 2: Push to end and limit to 15 items
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        $push: {
+          viewedProducts: {
+            $each: [productId],
+            $slice: -15
+          }
+        }
+      },
+      { new: true }
+    );
+    return updatedUser;
+  }
 }

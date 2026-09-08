@@ -68,6 +68,12 @@ export class User extends Document {
 
             @Prop({ default: 0 })
             loyaltyPoints: number;
+
+            @Prop({ type: [String], default: [] })
+            searchHistory: string[];
+
+            @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }], default: [] })
+            viewedProducts: Types.ObjectId[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
