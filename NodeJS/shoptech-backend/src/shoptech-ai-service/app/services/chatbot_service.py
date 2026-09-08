@@ -432,7 +432,7 @@ class ChatbotService:
                 now = datetime.utcnow()
                 active_vouchers = list(self.db.vouchers.find({
                     "isActive": True,
-                    "expirationDate": {"$gt": now},
+                    "expirationDate": {"$gte": now},
                     "$expr": {"$lt": ["$usedCount", "$usageLimit"]}
                 }).limit(5))
                 if active_vouchers:
