@@ -55,7 +55,8 @@ function NewsDetailPage() {
 
   return (
     <>
-      <Breadcrumb items={[{ label: "Tin công nghệ", href: "/news" }, { label: news.title }]} />
+      <Breadcrumb items={[{ label: "Tin công nghệ", to: "/news" }, { label: news.title }]} />
+
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-card text-card-foreground rounded-2xl p-6 md:p-10 shadow-xl border">

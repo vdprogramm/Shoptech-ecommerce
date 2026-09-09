@@ -19,6 +19,11 @@ export const adminUserService = {
   createUserByAdmin: (data: any) => {
     return axiosClient.post("/users", data);
   },
+
+  async updateUser(id: string, data: any) {
+    const response = await axiosClient.patch(`/users/${id}/admin-update`, data);
+    return response.data;
+  },
 };
 
 export const apiAdminUser = adminUserService;

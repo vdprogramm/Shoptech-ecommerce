@@ -53,7 +53,6 @@ import { Route as SiteCategorySlugRouteImport } from './routes/_site/category.$s
 import { Route as SiteAdminVouchersRouteImport } from './routes/_site/admin/vouchers'
 import { Route as SiteAdminUsersRouteImport } from './routes/_site/admin/users'
 import { Route as SiteAdminStoresRouteImport } from './routes/_site/admin/stores'
-import { Route as SiteAdminStatsRouteImport } from './routes/_site/admin/stats'
 import { Route as SiteAdminShippersRouteImport } from './routes/_site/admin/shippers'
 import { Route as SiteAdminReviewsRouteImport } from './routes/_site/admin/reviews'
 import { Route as SiteAdminProductsRouteImport } from './routes/_site/admin/products'
@@ -289,11 +288,6 @@ const SiteAdminStoresRoute = SiteAdminStoresRouteImport.update({
   path: '/stores',
   getParentRoute: () => SiteAdminRoute,
 } as any)
-const SiteAdminStatsRoute = SiteAdminStatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => SiteAdminRoute,
-} as any)
 const SiteAdminShippersRoute = SiteAdminShippersRouteImport.update({
   id: '/shippers',
   path: '/shippers',
@@ -407,7 +401,6 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof SiteAdminProductsRoute
   '/admin/reviews': typeof SiteAdminReviewsRoute
   '/admin/shippers': typeof SiteAdminShippersRoute
-  '/admin/stats': typeof SiteAdminStatsRoute
   '/admin/stores': typeof SiteAdminStoresRoute
   '/admin/users': typeof SiteAdminUsersRoute
   '/admin/vouchers': typeof SiteAdminVouchersRoute
@@ -466,7 +459,6 @@ export interface FileRoutesByTo {
   '/admin/products': typeof SiteAdminProductsRoute
   '/admin/reviews': typeof SiteAdminReviewsRoute
   '/admin/shippers': typeof SiteAdminShippersRoute
-  '/admin/stats': typeof SiteAdminStatsRoute
   '/admin/stores': typeof SiteAdminStoresRoute
   '/admin/users': typeof SiteAdminUsersRoute
   '/admin/vouchers': typeof SiteAdminVouchersRoute
@@ -529,7 +521,6 @@ export interface FileRoutesById {
   '/_site/admin/products': typeof SiteAdminProductsRoute
   '/_site/admin/reviews': typeof SiteAdminReviewsRoute
   '/_site/admin/shippers': typeof SiteAdminShippersRoute
-  '/_site/admin/stats': typeof SiteAdminStatsRoute
   '/_site/admin/stores': typeof SiteAdminStoresRoute
   '/_site/admin/users': typeof SiteAdminUsersRoute
   '/_site/admin/vouchers': typeof SiteAdminVouchersRoute
@@ -592,7 +583,6 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/reviews'
     | '/admin/shippers'
-    | '/admin/stats'
     | '/admin/stores'
     | '/admin/users'
     | '/admin/vouchers'
@@ -651,7 +641,6 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/reviews'
     | '/admin/shippers'
-    | '/admin/stats'
     | '/admin/stores'
     | '/admin/users'
     | '/admin/vouchers'
@@ -713,7 +702,6 @@ export interface FileRouteTypes {
     | '/_site/admin/products'
     | '/_site/admin/reviews'
     | '/_site/admin/shippers'
-    | '/_site/admin/stats'
     | '/_site/admin/stores'
     | '/_site/admin/users'
     | '/_site/admin/vouchers'
@@ -1053,13 +1041,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteAdminStoresRouteImport
       parentRoute: typeof SiteAdminRoute
     }
-    '/_site/admin/stats': {
-      id: '/_site/admin/stats'
-      path: '/stats'
-      fullPath: '/admin/stats'
-      preLoaderRoute: typeof SiteAdminStatsRouteImport
-      parentRoute: typeof SiteAdminRoute
-    }
     '/_site/admin/shippers': {
       id: '/_site/admin/shippers'
       path: '/shippers'
@@ -1201,7 +1182,6 @@ interface SiteAdminRouteChildren {
   SiteAdminProductsRoute: typeof SiteAdminProductsRoute
   SiteAdminReviewsRoute: typeof SiteAdminReviewsRoute
   SiteAdminShippersRoute: typeof SiteAdminShippersRoute
-  SiteAdminStatsRoute: typeof SiteAdminStatsRoute
   SiteAdminStoresRoute: typeof SiteAdminStoresRoute
   SiteAdminUsersRoute: typeof SiteAdminUsersRoute
   SiteAdminVouchersRoute: typeof SiteAdminVouchersRoute
@@ -1219,7 +1199,6 @@ const SiteAdminRouteChildren: SiteAdminRouteChildren = {
   SiteAdminProductsRoute: SiteAdminProductsRoute,
   SiteAdminReviewsRoute: SiteAdminReviewsRoute,
   SiteAdminShippersRoute: SiteAdminShippersRoute,
-  SiteAdminStatsRoute: SiteAdminStatsRoute,
   SiteAdminStoresRoute: SiteAdminStoresRoute,
   SiteAdminUsersRoute: SiteAdminUsersRoute,
   SiteAdminVouchersRoute: SiteAdminVouchersRoute,

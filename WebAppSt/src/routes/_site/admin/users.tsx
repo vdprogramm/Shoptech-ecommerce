@@ -18,6 +18,15 @@ function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // State cho Modal Sửa Người Dùng
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    fullName: "",
+    email: "",
+    roles: [] as string[],
+  });
+
   // 1. Hàm lấy danh sách người dùng hệ thống
   const fetchUsers = async () => {
     setLoading(true);
@@ -50,9 +59,56 @@ function AdminUsersPage() {
     }
   };
 
+  // Mở modal sửa
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setEditFormData({
+      fullName: user.fullName || "",
+      email: user.email || "",
+      roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []),
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Đóng modal
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingUser(null);
+  };
+
+  // Xử lý submit cập nhật
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    
+    try {
+      await apiAdminUser.updateUser(editingUser._id, editFormData);
+      toast.success("Cập nhật thông tin người dùng thành công!");
+      closeEditModal();
+      fetchUsers();
+    } catch (err: any) {
+      console.error("Lỗi cập nhật user:", err);
+      toast.error(err.response?.data?.message || "Có lỗi xảy ra khi cập nhật tài khoản.");
+    }
+  };
+
+  // Xử lý đổi role trong form
+  const handleRoleChange = (role: string) => {
+    setEditFormData((prev) => {
+      const currentRoles = prev.roles;
+      if (currentRoles.includes(role)) {
+        return { ...prev, roles: currentRoles.filter((r) => r !== role) };
+      } else {
+        return { ...prev, roles: [...currentRoles, role] };
+      }
+    });
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const roleOptions = ["ADMIN", "STORE_OWNER", "STORE_STAFF", "SHIPPER", "CUSTOMER"];
 
   return (
     <div className="p-6 text-gray-900">
@@ -139,7 +195,10 @@ function AdminUsersPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-3">
-                        <button className="text-blue-600 hover:text-blue-700 hover:underline text-xs font-semibold">
+                        <button 
+                          onClick={() => openEditModal(u)}
+                          className="text-blue-600 hover:text-blue-700 hover:underline text-xs font-semibold"
+                        >
                           Sửa
                         </button>
                         <button
@@ -186,6 +245,72 @@ function AdminUsersPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Chỉnh sửa thông tin</h3>
+            </div>
+            <form onSubmit={handleUpdateUser} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tên người dùng</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.fullName}
+                  onChange={(e) => setEditFormData({...editFormData, fullName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email đăng nhập</label>
+                <input
+                  type="email"
+                  required
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quyền hạn (Roles)</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  {roleOptions.map((role) => (
+                    <label key={role} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editFormData.roles.includes(role)}
+                        onChange={() => handleRoleChange(role)}
+                        className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">{role}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

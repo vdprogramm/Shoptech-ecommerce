@@ -23,8 +23,11 @@ export interface CartItem {
     name: string; // Ví dụ: "iPhone 15 Pro Max - 256GB - Màu Titan"
     price: number;
     images?: string[];
+    imageUrl?: string;
     stock: number;
-    product?: string; // ID của sản phẩm gốc nếu cần
+    product?: any; // ID của sản phẩm gốc hoặc object nếu populate
+    isFlashSale?: boolean;
+    originalPrice?: number;
   };
   quantity: number;
 }
