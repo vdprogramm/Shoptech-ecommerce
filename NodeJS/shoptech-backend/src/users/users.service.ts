@@ -251,6 +251,18 @@ export class UsersService implements OnModuleInit {
     }
     return updatedUser;
   }
+  async adminUpdateUser(userId: string, updateData: any) {
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!updatedUser) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+    return updatedUser;
+  }
 
   // --- HÀM MỚI: CẬP NHẬT LỊCH SỬ TÌM KIẾM ---
   async addSearchKeyword(userId: string, keyword: string) {

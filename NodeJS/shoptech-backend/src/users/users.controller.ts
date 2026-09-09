@@ -89,6 +89,20 @@ export class UsersController {
     return this.usersService.updateRole(id, roles);
   }
 
+  @Patch(':id/admin-update')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async adminUpdate(
+    @Param('id') id: string,
+    @Body() updateData: any
+  ) {
+    const user = await this.usersService.adminUpdateUser(id, updateData);
+    return {
+      message: 'Cập nhật thông tin người dùng thành công',
+      data: user,
+    };
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
