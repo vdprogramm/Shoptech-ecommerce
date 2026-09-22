@@ -17,14 +17,14 @@ export class ProductVariantsController {
 
   // ADMIN TẠO BIẾN THỂ
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STORE_OWNER, Role.STORE_STAFF)
   @Post(':productId')
   createVariant(@Param('productId') productId: string, @Body() body: any) {
     return this.variantsService.createVariant(productId, body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STORE_OWNER, Role.STORE_STAFF)
   @Patch(':variantId/add-stock')
   addStock(
     @Param('variantId') variantId: string,

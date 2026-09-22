@@ -17,7 +17,7 @@ export class ProductAttributesController {
 
   // ADMIN THÊM/SỬA BỘ THÔNG SỐ CHO SẢN PHẨM
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.STORE_OWNER)
+  @Roles(Role.ADMIN, Role.STORE_OWNER, Role.STORE_STAFF)
   @Post(':productId')
   upsertSpecs(
     @Param('productId') productId: string,
@@ -28,7 +28,7 @@ export class ProductAttributesController {
 
   @Delete(':productId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STORE_OWNER, Role.STORE_STAFF)
   async deleteSpecs(@Param('productId') productId: string) {
     return this.attributesService.deleteAttributes(productId);
   }
