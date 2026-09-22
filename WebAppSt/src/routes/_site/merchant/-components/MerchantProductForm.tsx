@@ -184,6 +184,14 @@ export function MerchantProductForm({
     });
   };
 
+  const handleVariantFileUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => handleVariantChange(index, "imageUrl", reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const addVariantRow = () => {
     const slug = formData.name
       ? formData.name
