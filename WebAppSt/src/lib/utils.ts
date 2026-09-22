@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 export function getImageUrl(path?: string): string {
-  if (!path) return "/placeholder-product.png";
+  if (!path) return "https://placehold.co/500x500?text=No+Image";
   if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) {
     return path;
   }
