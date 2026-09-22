@@ -22,6 +22,7 @@ interface LocalVariant {
   attr2: string;
   price: number;
   stock: number;
+  imageUrl?: string;
 }
 
 export function MerchantProductForm({
@@ -48,7 +49,7 @@ export function MerchantProductForm({
   const [hasAttr2, setHasAttr2] = useState(true);
 
   const [variants, setVariants] = useState<LocalVariant[]>([
-    { sku: "", attr1: "Tiêu chuẩn", attr2: "Mặc định", price: 0, stock: 10 },
+    { sku: "", attr1: "Tiêu chuẩn", attr2: "Mặc định", price: 0, stock: 10, imageUrl: "" },
   ]);
 
   const [categories, setCategories] = useState<any[]>([]);
@@ -116,6 +117,7 @@ export function MerchantProductForm({
                     attr2: v.attributes?.[keys[1] || vKeys[1]] || "Mặc định",
                     price: v.price,
                     stock: v.stock,
+                    imageUrl: v.imageUrl || "",
                   };
                 }),
               );
@@ -198,6 +200,7 @@ export function MerchantProductForm({
           attr2: "Mặc định",
           price: formData.price || 0,
           stock: 10,
+          imageUrl: "",
         },
     ]);
   };
@@ -267,7 +270,7 @@ export function MerchantProductForm({
         price: Number(v.price) || Number(formData.price),
         stock: Number(v.stock) || 0,
         attributes: attrs,
-        imageUrl: formData.images[0] || "",
+        imageUrl: v.imageUrl || formData.images[0] || "",
       };
     });
 
@@ -538,6 +541,27 @@ export function MerchantProductForm({
                     min="0"
                     required
                   />
+                </div>
+                <div className="flex flex-col items-center">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Ảnh
+                  </label>
+                  <label className="border-2 border-dashed rounded aspect-square flex items-center justify-center cursor-pointer hover:bg-muted relative group overflow-hidden bg-card h-[28px] w-[28px] mt-0.5">
+                    {v.imageUrl ? (
+                      <>
+                        <img src={v.imageUrl} alt="Var" className="w-full h-full object-cover" />
+                        <div 
+                          className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center"
+                          onClick={(e) => { e.preventDefault(); handleVariantChange(idx, "imageUrl", ""); }}
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <ImagePlus className="w-3 h-3 text-muted-foreground" />
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleVariantFileUpload(idx, e)} />
+                  </label>
                 </div>
                 <button
                   type="button"
