@@ -30,7 +30,7 @@ export default function ShipperDeliveryScreen() {
     const order = {
         id: `#${String(validId).slice(-6).toUpperCase()}`,
         pickupAddress: orderData.store?.address || orderData.pickupAddress || 'Chưa có thông tin cửa hàng',
-        deliveryAddress: orderData.shippingAddress || orderData.deliveryAddress || 'Chưa có thông tin giao hàng',
+        deliveryAddress: (orderData.shippingAddress || orderData.deliveryAddress || 'Chưa có thông tin giao hàng').replace(/, undefined/g, '').replace(/undefined/g, ''),
         price: `${(orderData.grandTotal || 0).toLocaleString('vi-VN')} đ`,
         subOrderId: validId,
         status: orderData.status

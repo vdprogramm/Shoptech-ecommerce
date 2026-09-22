@@ -86,7 +86,7 @@ export default function PendingOrdersScreen() {
                     <View style={styles.iconBox}>
                         <Ionicons name="location-outline" size={16} color="#cb1c22" />
                     </View>
-                    <Text style={styles.infoText} numberOfLines={2}>{item.shippingAddress || 'Chưa cập nhật địa chỉ'}</Text>
+                    <Text style={styles.infoText} numberOfLines={2}>{(item.shippingAddress || 'Chưa cập nhật địa chỉ').replace(/, undefined/g, '').replace(/undefined/g, '')}</Text>
                 </View>
             </View>
 

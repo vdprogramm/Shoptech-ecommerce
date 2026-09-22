@@ -1,15 +1,19 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Bỏ qua dependencies và môi trường
 node_modules/
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Expo
+# Expo & Metro
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+.metro-health-check*
 
-# Native build & cache (Chặn đích danh các thư mục rác hàng GB)
+# Native build & cache (Android/iOS)
 android/app/build/
 android/build/
 android/.gradle/
@@ -18,12 +22,11 @@ android/app/.cxx/
 android/.kotlin/
 ios/build/
 ios/Pods/
+*.xcworkspace
 
-# Backups & Test Folders (Chặn các thư mục tự tạo gây nặng máy)
+# Backups & Keys
 APK_Backups/
 kiem-tra-dung-luong/
-
-# Keys & Signing
 *.orig.*
 *.jks
 *.p8
@@ -31,20 +34,7 @@ kiem-tra-dung-luong/
 *.key
 *.mobileprovision
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
+# OS & TypeScript
 .DS_Store
 *.pem
-
-# local env files
-.env*.local
-
-# typescript
 *.tsbuildinfo

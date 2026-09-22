@@ -9,8 +9,9 @@
     "android": "expo run:android",
     "android:customer": "cross-env APP_VARIANT=customer expo run:android",
     "android:shipper": "cross-env APP_VARIANT=shipper expo run:android",
-    "build:apk:customer": "cross-env APP_VARIANT=customer npx expo prebuild --platform android --clean && cd android && gradlew assembleRelease",
-    "build:apk:shipper": "cross-env APP_VARIANT=shipper npx expo prebuild --platform android --clean && cd android && gradlew assembleRelease",
+    "build:apk:customer": "cross-env APP_VARIANT=customer npm run _build_android",
+    "build:apk:shipper": "cross-env APP_VARIANT=shipper npm run _build_android",
+    "_build_android": "npx expo prebuild --platform android --clean && cd android && gradlew assembleRelease",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "postinstall": "patch-package"

@@ -72,7 +72,7 @@ export default function ShipperServicesScreen() {
                         <Ionicons name="location" size={18} color="#cb1c22" />
                         <Text style={styles.routeText} numberOfLines={2}>
                             <Text style={styles.routeLabel}>Giao: </Text>
-                            {item.shippingAddress || 'Chưa có địa chỉ giao'}
+                            {(item.shippingAddress || 'Chưa có địa chỉ giao').replace(/, undefined/g, '').replace(/undefined/g, '')}
                         </Text>
                     </View>
                 </View>
