@@ -9,6 +9,15 @@ Tài khoản admin:
 Email: admin@ shoptech.com
 Password : password123
 
+## 📺 Demo & Hình Ảnh
+
+> **⚠️ LƯU Ý VỀ MÔI TRƯỜNG DEMO (AI COMPONENT):**
+> Do giới hạn về tài nguyên phần cứng của các server cloud miễn phí (Thường bị quá tải bộ nhớ / Over memory khi chạy các thư viện AI nặng như Torch/Tensorflow), phần **AI Service hiện tại đang được vận hành local và expose qua Ngrok**. 
+> 
+> * **Để xem hệ thống hoạt động trực quan ngay lập tức:** Vui lòng xem **[Video Demo tại đây]*.
+> * **Link Web Demo (Fullstack):** [Bấm vào đây để xem Web](https://drive.google.com/file/d/1HUuhGzvAqDdENqiwRD2fJpK1IMF-VGWh/view?usp=drive_link) *(Phần AI chỉ phản hồi khi máy local của tác giả bật Ngrok).*
+
+
 ## 📊 Quick Summary
 
 | Thông Số | Chi Tiết |
