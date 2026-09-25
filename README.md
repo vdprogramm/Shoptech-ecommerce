@@ -5,6 +5,10 @@
 
 ---
 
+Tài khoản admin:
+Email: admin@ shoptech.com
+Password : password123
+
 ## 📊 Quick Summary
 
 | Thông Số | Chi Tiết |
