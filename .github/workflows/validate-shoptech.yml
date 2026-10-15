@@ -34,6 +34,24 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: WebAppSt/package-lock.json
+      - name: Reconcile patched TanStack lockfile (temporary)
+        run: |
+          cp package-lock.json /tmp/shoptech-web-lock-before.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node - <<'NODE'
+          const prev = require('/tmp/shoptech-web-lock-before.json');
+          const next = require('./package-lock.json');
+          const changes = {};
+          for (const [k, v] of Object.entries(next.packages || {})) {
+            if (JSON.stringify(v) !== JSON.stringify((prev.packages || {})[k])) changes[k] = v;
+          }
+          const removed = Object.keys(prev.packages || {}).filter(k => !(k in next.packages));
+          const server = next.packages['node_modules/@tanstack/start-server-core']?.version;
+          const start = next.packages['node_modules/@tanstack/react-start']?.version;
+          console.log('PATCHED_VERSIONS', JSON.stringify({server,start}));
+          if (!server || !start || server !== '1.169.39' || start !== '1.168.60') process.exit(17);
+          console.log('WEB_LOCK_PATCH_START_' + Buffer.from(JSON.stringify({changes, removed})).toString('base64') + '_WEB_LOCK_PATCH_END');
+          NODE
       - run: npm ci
       - run: npm run build
 
