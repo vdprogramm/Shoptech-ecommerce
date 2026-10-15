@@ -18,21 +18,6 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: NodeJS/shoptech-backend/package-lock.json
-      # Temporary diagnostic: rebuild lock metadata in runner to capture exact missing entries.
-      - name: Diagnose and reconcile lockfile in CI
-        run: |
-          cp package-lock.json /tmp/shoptech-original-lock.json
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          node - <<'NODE'
-          const original = require('/tmp/shoptech-original-lock.json');
-          const next = require('./package-lock.json');
-          const changes = {};
-          for (const [k, v] of Object.entries(next.packages || {})) {
-            if (JSON.stringify(v) !== JSON.stringify((original.packages || {})[k])) changes[k] = v;
-          }
-          const removed = Object.keys(original.packages || {}).filter(k => !(k in (next.packages || {})));
-          console.log('LOCK_PATCH_START_' + Buffer.from(JSON.stringify({changes,removed})).toString('base64') + '_LOCK_PATCH_END');
-          NODE
       - run: npm ci
       - run: npm run build
 
