@@ -1,0 +1,74 @@
+name: Validate ShopTech
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: NestJS build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: NodeJS/shoptech-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: NodeJS/shoptech-backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  web:
+    name: React Web build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: WebAppSt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: WebAppSt/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  customer:
+    name: Customer Expo config
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ReactNative/customer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ReactNative/customer/package-lock.json
+      - run: npm ci
+      - run: npx expo config --json > /dev/null
+        env:
+          APP_VARIANT: customer
+
+  shipper:
+    name: Shipper Expo config
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ReactNative/shipper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ReactNative/shipper/package-lock.json
+      - run: npm ci
+      - run: npx expo config --json > /dev/null
+        env:
+          APP_VARIANT: shipper
